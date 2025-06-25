@@ -1,32 +1,49 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Default: Lock down all access.
-    // Individual rules below will open up specific paths.
-    match /{document=**} {
-      allow read, write: if false;
+    // Helper function to check if the requesting user has an 'admin' role.
+    // This requires a 'users' collection where each document ID is a user's UID,
+    // and each document contains a 'role' field.
+    // Example: /users/{uid} -> { role: 'admin' }
+    function isAdmin() {
+      return request.auth != null &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Allow public read access for winners history, funds, and withdrawal history.
-    // Writes are denied, they must go through the server-side actions.
-    match /ruletas/{raffleId} {
+    // Ruletas collection:
+    // Anyone can read the raffle history.
+    // Writes are only allowed from the server (via Server Actions), so client writes are denied.
+    match /ruletas/{ruletaId} {
       allow read: if true;
-      allow write: if false; // Writes only allowed from the server
+      allow write: if false;
     }
 
-    match /retiros/{withdrawalId} {
+    // Retiros collection:
+    // Anyone can read the withdrawal history.
+    // Writes are only allowed from the server, so client writes are denied.
+    match /retiros/{retiroId} {
       allow read: if true;
-      allow write: if false; // Writes only allowed from the server
+      allow write: if false;
     }
 
-    // Allow public read on the funds summary document.
-    // Writes are denied, they must go through server-side actions which use increments.
+    // Funds summary document:
+    // Anyone can read the funds summary.
+    // Writes are only allowed from the server, so client writes are denied.
     match /funds/summary {
       allow read: if true;
-      allow write: if false; // Writes only allowed from the server
+      allow write: if false;
+    }
+
+    // Users collection:
+    // Allow users to read their own data.
+    // Allow admins to read any user's data (for potential future admin panels).
+    // Only admins can create, update, or delete user roles.
+    match /users/{userId} {
+      allow read: if request.auth.uid == userId || isAdmin();
+      allow write: if isAdmin();
     }
   }
 }
