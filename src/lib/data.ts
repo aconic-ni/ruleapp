@@ -16,6 +16,7 @@ const MOCK_WITHDRAWALS: Withdrawal[] = [];
 export interface Participant {
     name: string;
     ticketValue: number;
+    number: number;
 }
 
 export interface Funds {

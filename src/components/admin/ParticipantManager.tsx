@@ -11,16 +11,19 @@ import type { Participant } from '@/lib/data';
 
 interface ParticipantManagerProps {
     participants: Participant[];
-    onAddParticipant: (name: string, ticketValue: number) => void;
+    onAddParticipant: (name: string, ticketValue: number, number: number) => void;
 }
 
 export default function ParticipantManager({ participants, onAddParticipant }: ParticipantManagerProps) {
     const [newName, setNewName] = useState('');
     const [ticketValue, setTicketValue] = useState(25);
+    const [participantNumber, setParticipantNumber] = useState('');
     const { toast } = useToast();
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        const num = parseInt(participantNumber, 10);
+
         if (newName.trim() === '') {
             toast({ title: "Error", description: "El nombre no puede estar vacío.", variant: "destructive" });
             return;
@@ -29,15 +32,24 @@ export default function ParticipantManager({ participants, onAddParticipant }: P
             toast({ title: "Error", description: "El valor del boleto debe ser positivo.", variant: "destructive" });
             return;
         }
+        if (isNaN(num) || num < 1 || num > 50) {
+            toast({ title: "Error", description: "El número debe estar entre 1 y 50.", variant: "destructive" });
+            return;
+        }
+        if (participants.some(p => p.number === num)) {
+            toast({ title: "Error", description: `El número ${num} ya ha sido elegido. Por favor, elige otro.`, variant: "destructive" });
+            return;
+        }
 
-        onAddParticipant(newName, ticketValue);
+        onAddParticipant(newName, ticketValue, num);
         
         toast({
             title: "Éxito",
-            description: `Participante "${newName}" agregado con un boleto de $${ticketValue}.`,
+            description: `Participante "${newName}" agregado con el número ${num} y un boleto de $${ticketValue}.`,
         });
         setNewName('');
         setTicketValue(25);
+        setParticipantNumber('');
     };
 
     return (
@@ -68,6 +80,18 @@ export default function ParticipantManager({ participants, onAddParticipant }: P
                                 placeholder="25"
                             />
                         </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="participant-number">Número (1-50)</Label>
+                            <Input
+                                id="participant-number"
+                                type="number"
+                                min="1"
+                                max="50"
+                                value={participantNumber}
+                                onChange={(e) => setParticipantNumber(e.target.value)}
+                                placeholder="Ej: 7"
+                            />
+                        </div>
                         <Button type="submit">Agregar Participante</Button>
                     </form>
                 </div>
@@ -77,9 +101,12 @@ export default function ParticipantManager({ participants, onAddParticipant }: P
                         {participants.length > 0 ? (
                             <ul className="space-y-1">
                             {participants.map((p, i) => (
-                                <li key={i} className="text-sm p-1 rounded-md transition-colors hover:bg-background flex justify-between">
+                                <li key={i} className="text-sm p-1 rounded-md transition-colors hover:bg-background flex justify-between items-center">
                                     <span>{i+1}. {p.name}</span>
-                                    <span className="font-mono text-muted-foreground">${p.ticketValue}</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-bold text-primary text-base">#{p.number}</span>
+                                        <span className="font-mono text-muted-foreground">${p.ticketValue}</span>
+                                    </div>
                                 </li>
                             ))}
                             </ul>

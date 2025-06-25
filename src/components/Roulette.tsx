@@ -109,12 +109,12 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
                 }}
               >
                 <div 
-                  className="absolute w-[160%] h-full flex items-center justify-center text-white font-bold text-xs md:text-sm -translate-y-1/2"
+                  className="absolute w-[160%] h-full flex items-center justify-center text-white font-bold text-lg md:text-2xl -translate-y-1/2"
                   style={{ 
                     transform: `skewY(${skew > 0 ? -skew : 0}deg) rotate(${segmentDegrees/2}deg) translate(-25%, -50%)`,
                   }}
                 >
-                  <span className="block w-24 truncate text-center font-body">{participant.name.split(' ')[0]}</span>
+                  <span className="block text-center font-headline">{participant.number}</span>
                 </div>
               </div>
             )

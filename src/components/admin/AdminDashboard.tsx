@@ -53,8 +53,8 @@ export default function AdminDashboard({ initialParticipants, initialFunds, init
         router.push('/');
     };
     
-    const handleAddParticipant = (name: string, ticketValue: number) => {
-        setParticipants(prev => [...prev, { name, ticketValue }]);
+    const handleAddParticipant = (name: string, ticketValue: number, number: number) => {
+        setParticipants(prev => [...prev, { name, ticketValue, number }]);
         setFunds(prev => ({ ...prev, total: prev.total + ticketValue }));
     };
 
