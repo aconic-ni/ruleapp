@@ -21,6 +21,7 @@ interface RouletteProps {
 }
 
 const COLORS = ["#3B82F6", "#0EA5E9", "#FFC107", "#FF5722", "#4CAF50", "#2196F3", "#E91E63", "#00BCD4"];
+const SPIN_DURATION_MS = 8000;
 
 export default function Roulette({ participants = [], onSpinEnd }: RouletteProps) {
   const [isSpinning, setIsSpinning] = useState(false);
@@ -31,7 +32,11 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
 
   useEffect(() => {
     // Initial shuffle when participants change
-    setShuffledParticipants([...participants].sort(() => Math.random() - 0.5));
+    if (participants.length > 0) {
+        setShuffledParticipants([...participants].sort(() => Math.random() - 0.5));
+    } else {
+        setShuffledParticipants([]);
+    }
   }, [participants]);
   
   const numParticipants = shuffledParticipants.length;
@@ -53,11 +58,18 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
 
     const winnerSegmentStart = segmentDegrees * winnerIndex;
     const winnerSegmentCenter = winnerSegmentStart + (segmentDegrees / 2);
-    const targetRotation = 360 - winnerSegmentCenter;
+    
+    // The pointer is at the top (270deg). We want the center of the winner's segment to land there.
+    const targetVisualAngle = (270 - winnerSegmentCenter + 360) % 360;
+    const currentVisualAngle = rotation % 360;
+    
+    let angleDelta = targetVisualAngle - currentVisualAngle;
+    if (angleDelta < 0) {
+        angleDelta += 360; // Ensure we always spin forward
+    }
 
-    const extraSpins = Math.floor(Math.random() * 6) + 8; // 8 to 13 spins
-    // Ensure the wheel always spins forward
-    const newRotation = rotation - (rotation % 360) + (360 * extraSpins) + targetRotation;
+    const extraSpins = 8 * 360; // 8 full spins for effect
+    const newRotation = rotation + extraSpins + angleDelta;
 
     setRotation(newRotation);
 
@@ -66,7 +78,7 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
       setWinner(winnerData.name);
       setShowWinnerDialog(true);
       onSpinEnd(winnerData.name);
-    }, 8000); // Must match animation duration
+    }, SPIN_DURATION_MS); // Must match animation duration
   };
 
   const wheelStyle = useMemo(() => {
@@ -112,26 +124,31 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
         <div style={{ clipPath: 'polygon(50% 100%, 0 0, 100% 0)' }} className="absolute top-0 w-8 h-10 bg-accent z-10 transform -translate-y-1/2" />
         
         <div
-          className="relative w-full h-full rounded-full border-8 border-accent bg-background shadow-2xl overflow-hidden transition-transform duration-[8000ms] ease-out"
+          className="relative w-full h-full rounded-full border-8 border-accent bg-background shadow-2xl transition-transform ease-out"
           style={{ 
             transform: `rotate(${rotation}deg)`,
-            ...wheelStyle
+            transitionDuration: isSpinning ? `${SPIN_DURATION_MS}ms` : '0ms'
           }}
         >
-          {/* Labels */}
-          {numParticipants > 0 && shuffledParticipants.map((participant, index) => {
+            {/* Segments */}
+            <div className="absolute inset-0" style={wheelStyle} />
+
+            {/* Labels */}
+            {numParticipants > 0 && shuffledParticipants.map((participant, index) => {
               const angle = segmentDegrees * index + (segmentDegrees / 2); // Angle to center of segment
               const radiusPercent = 35; // 35% from the center
               const angleRad = (angle - 90) * (Math.PI / 180); // adjust by -90 because 0deg is right, we want it to be top
-              const x = radiusPercent * Math.cos(angleRad);
-              const y = radiusPercent * Math.sin(angleRad);
+              const x = 50 + radiusPercent * Math.cos(angleRad);
+              const y = 50 + radiusPercent * Math.sin(angleRad);
               
               return (
                 <div
                   key={`${participant.number}-${index}`}
-                  className="absolute top-1/2 left-1/2 flex items-center justify-center"
+                  className="absolute flex items-center justify-center"
                   style={{
-                    transform: `translate(-50%, -50%) translate(${x}%, ${y}%) rotate(${angle}deg)`
+                    top: `${y}%`,
+                    left: `${x}%`,
+                    transform: `translate(-50%, -50%)`
                   }}
                 >
                   <span
