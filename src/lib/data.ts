@@ -1,6 +1,5 @@
 
 import { db } from './firebase-admin';
-import { collection, getDocs, getDoc, doc, orderBy, limit, query, where } from 'firebase-admin/firestore';
 
 export interface Participant {
     name: string;
@@ -40,7 +39,7 @@ export interface Withdrawal {
 
 export async function getFunds(): Promise<Funds> {
     try {
-        const fundsDoc = await getDoc(doc(db, 'funds', 'summary'));
+        const fundsDoc = await db.collection('funds').doc('summary').get();
         if (fundsDoc.exists) {
             return fundsDoc.data() as Funds;
         }
@@ -54,13 +53,12 @@ export async function getFunds(): Promise<Funds> {
 export async function getRecentWinners(): Promise<Winner[]> {
     const winners: Winner[] = [];
     try {
-        const q = query(
-            collection(db, 'ruletas'), 
-            where('status', '==', 'completed'), 
-            orderBy('drawDate', 'desc'), 
-            limit(3)
-        );
-        const querySnapshot = await getDocs(q);
+        const querySnapshot = await db.collection('ruletas')
+            .where('status', '==', 'completed')
+            .orderBy('drawDate', 'desc')
+            .limit(3)
+            .get();
+
         querySnapshot.forEach((doc) => {
             const data = doc.data();
             if (data.winner && data.drawDate) {
@@ -79,12 +77,11 @@ export async function getRecentWinners(): Promise<Winner[]> {
 export async function getAllWinners(): Promise<Winner[]> {
     const winners: Winner[] = [];
      try {
-        const q = query(
-            collection(db, 'ruletas'), 
-            where('status', '==', 'completed'),
-            orderBy('drawDate', 'desc')
-        );
-        const querySnapshot = await getDocs(q);
+        const querySnapshot = await db.collection('ruletas')
+            .where('status', '==', 'completed')
+            .orderBy('drawDate', 'desc')
+            .get();
+            
         querySnapshot.forEach((doc) => {
             const data = doc.data();
             if(data.winner && data.drawDate) {
@@ -103,8 +100,7 @@ export async function getAllWinners(): Promise<Winner[]> {
 export async function getWithdrawals(): Promise<Withdrawal[]> {
     const withdrawals: Withdrawal[] = [];
     try {
-        const q = query(collection(db, 'retiros'), orderBy('date', 'desc'));
-        const querySnapshot = await getDocs(q);
+        const querySnapshot = await db.collection('retiros').orderBy('date', 'desc').get();
         querySnapshot.forEach((doc) => {
             const data = doc.data();
             withdrawals.push({
