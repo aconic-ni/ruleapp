@@ -3,9 +3,10 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Star, Shuffle } from 'lucide-react';
+import { Star, Shuffle, RotateCcw, Save } from 'lucide-react';
 import type { Participant } from '@/lib/data';
 import { cn } from '@/lib/utils';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/card';
 
 interface RouletteProps {
   participants: Participant[];
@@ -49,7 +50,6 @@ const ConfettiExplosion = () => {
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * -20}%`,
                 backgroundColor: confettiColors[i % confettiColors.length],
-                transform: `rotate(${Math.random() * 360}deg)`,
                 animation: `confetti-fall ${2 + Math.random() * 2}s ${Math.random() * 1}s linear forwards`,
             };
             return <ConfettiPiece key={i} style={style} />;
@@ -65,18 +65,20 @@ export default function Roulette({ participants = [], onSpinEnd, onCelebrationEn
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [winner, setWinner] = useState<string | null>(null);
+  const [provisionalWinner, setProvisionalWinner] = useState<Participant | null>(null);
   const [shuffledParticipants, setShuffledParticipants] = useState<Participant[]>([]);
   const [showWinnerCelebration, setShowWinnerCelebration] = useState(false);
 
   useEffect(() => {
     setShuffledParticipants(shuffleArray(participants));
+    setProvisionalWinner(null);
   }, [participants]);
   
   const numParticipants = shuffledParticipants.length;
   const segmentDegrees = numParticipants > 0 ? 360 / numParticipants : 360;
 
   const handleShuffle = () => {
-    if(isSpinning) return;
+    if(isSpinning || provisionalWinner) return;
     setShuffledParticipants(shuffleArray(shuffledParticipants));
   }
 
@@ -84,6 +86,7 @@ export default function Roulette({ participants = [], onSpinEnd, onCelebrationEn
     if (isSpinning || numParticipants < 2) return;
 
     setIsSpinning(true);
+    setProvisionalWinner(null);
     setWinner(null);
     setShowWinnerCelebration(false);
 
@@ -105,12 +108,19 @@ export default function Roulette({ participants = [], onSpinEnd, onCelebrationEn
     setTimeout(() => {
         setIsSpinning(false);
         if (winningParticipant) {
-            setWinner(winningParticipant.name);
-            setShowWinnerCelebration(true);
-            onSpinEnd(winningParticipant.name); // Call onSpinEnd to save winner
+            setProvisionalWinner(winningParticipant);
         }
     }, SPIN_DURATION_SECONDS * 1000 + 200);
   };
+
+  const handleConfirmWinner = () => {
+    if (!provisionalWinner) return;
+    
+    onSpinEnd(provisionalWinner.name);
+    setWinner(provisionalWinner.name);
+    setShowWinnerCelebration(true);
+    setProvisionalWinner(null);
+  }
   
   const handleCelebrationEnd = () => {
     onCelebrationEnd();
@@ -138,7 +148,7 @@ export default function Roulette({ participants = [], onSpinEnd, onCelebrationEn
             </h1>
             <Button onClick={handleCelebrationEnd} size="lg" className="bg-white text-green-700 hover:bg-gray-200 text-xl font-bold px-10 py-8 rounded-full shadow-2xl z-10">
                 <Star className="mr-3 h-6 w-6" />
-                Cargar Otra Ruleta
+                Finalizar y Volver
             </Button>
         </div>
     )
@@ -206,16 +216,37 @@ export default function Roulette({ participants = [], onSpinEnd, onCelebrationEn
         </div>
       </div>
       
-      <div className="flex gap-4">
-        <Button onClick={handleShuffle} disabled={isSpinning} variant="outline">
-            <Shuffle className="mr-2 h-5 w-5" />
-            Mezclar
-        </Button>
-        <Button onClick={handleSpin} disabled={isSpinning || numParticipants < 2} size="lg" className="font-bold text-lg px-8 py-6 rounded-full shadow-lg">
-            <Star className={cn("mr-2 h-5 w-5", isSpinning && "animate-spin")} />
-            {isSpinning ? 'Girando...' : 'Girar la Tómbola'}
-        </Button>
-      </div>
+      {provisionalWinner ? (
+        <Card className="bg-primary/10 border-primary shadow-xl animate-in fade-in-50">
+            <CardHeader className="text-center pb-2">
+                <CardTitle className="text-primary">¡Tenemos un ganador provisional!</CardTitle>
+            </CardHeader>
+            <CardContent className="text-center">
+                <p className="text-3xl font-bold font-headline text-accent">{provisionalWinner.name}</p>
+            </CardContent>
+            <CardFooter className="flex justify-center gap-4">
+                <Button onClick={handleSpin} variant="outline" disabled={isSpinning}>
+                    <RotateCcw className="mr-2 h-5 w-5" />
+                    Volver a Girar
+                </Button>
+                <Button onClick={handleConfirmWinner} disabled={isSpinning}>
+                    <Save className="mr-2 h-5 w-5" />
+                    Guardar Ganador
+                </Button>
+            </CardFooter>
+        </Card>
+      ) : (
+        <div className="flex gap-4">
+          <Button onClick={handleShuffle} disabled={isSpinning} variant="outline">
+              <Shuffle className="mr-2 h-5 w-5" />
+              Mezclar
+          </Button>
+          <Button onClick={handleSpin} disabled={isSpinning || numParticipants < 2} size="lg" className="font-bold text-lg px-8 py-6 rounded-full shadow-lg">
+              <Star className={cn("mr-2 h-5 w-5", isSpinning && "animate-spin")} />
+              {isSpinning ? 'Girando...' : 'Girar la Tómbola'}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

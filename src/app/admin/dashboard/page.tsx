@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminDashboard from '@/components/admin/AdminDashboard';
-import { getFunds, getAllWinners, getWithdrawals, Funds, Winner, Withdrawal } from '@/lib/data';
+import { getFunds, getAllWinners, getWithdrawals, getAllRaffles, Funds, Winner, Withdrawal, Raffle } from '@/lib/data';
 import { useAuth } from '@/context/AuthContext';
 import { Loader2 } from 'lucide-react';
 
@@ -15,6 +15,7 @@ export default function DashboardPage() {
         funds: Funds;
         winners: Winner[];
         withdrawals: Withdrawal[];
+        raffles: Raffle[];
     } | null>(null);
 
     useEffect(() => {
@@ -25,12 +26,13 @@ export default function DashboardPage() {
 
     const handleDataRefresh = async () => {
         if (user) {
-            const [funds, winners, withdrawals] = await Promise.all([
+            const [funds, winners, withdrawals, raffles] = await Promise.all([
                 getFunds(),
                 getAllWinners(),
                 getWithdrawals(),
+                getAllRaffles(),
             ]);
-            setInitialData({ funds, winners, withdrawals });
+            setInitialData({ funds, winners, withdrawals, raffles });
         }
     }
 
@@ -53,6 +55,7 @@ export default function DashboardPage() {
             initialFunds={initialData.funds}
             initialWinners={initialData.winners}
             initialWithdrawals={initialData.withdrawals}
+            initialRaffles={initialData.raffles}
             onDataChange={handleDataRefresh}
         />
     );

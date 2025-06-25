@@ -5,10 +5,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, Landmark, Trophy, LogOut, Ticket, Loader2 } from 'lucide-react';
+import { Users, Landmark, Trophy, LogOut, Ticket, Loader2, FileClock } from 'lucide-react';
 import ParticipantManager from './ParticipantManager';
 import FundsManager from './FundsManager';
 import WinnerHistory from './WinnerHistory';
+import RaffleHistory from "./RaffleHistory";
 import Roulette from '../Roulette';
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
@@ -27,14 +28,16 @@ interface AdminDashboardProps {
     initialFunds: Funds;
     initialWinners: Winner[];
     initialWithdrawals: Withdrawal[];
+    initialRaffles: Raffle[];
     onDataChange: () => void;
 }
 
-export default function AdminDashboard({ initialFunds, initialWinners, initialWithdrawals, onDataChange }: AdminDashboardProps) {
+export default function AdminDashboard({ initialFunds, initialWinners, initialWithdrawals, initialRaffles, onDataChange }: AdminDashboardProps) {
     const router = useRouter();
     const { toast } = useToast();
     const { user, loading } = useAuth();
     
+    const [activeTab, setActiveTab] = useState('participants');
     const [raffleIdInput, setRaffleIdInput] = useState('');
     const [loadedRaffle, setLoadedRaffle] = useState<Raffle | null>(null);
     const [isLoadingRaffle, setIsLoadingRaffle] = useState(false);
@@ -121,6 +124,7 @@ export default function AdminDashboard({ initialFunds, initialWinners, initialWi
         setRaffleIdInput('');
         setRaffleError(null);
         setIsLoadingRaffle(false);
+        setActiveTab('participants');
     }
 
     return (
@@ -140,12 +144,13 @@ export default function AdminDashboard({ initialFunds, initialWinners, initialWi
                 </header>
                 
                 <main className="container mx-auto py-8">
-                    <Tabs defaultValue="participants" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5">
                             <TabsTrigger value="participants"><Users className="mr-2 h-4 w-4" />Participantes</TabsTrigger>
                             <TabsTrigger value="roulette"><Ticket className="mr-2 h-4 w-4" />Ruleta</TabsTrigger>
                             <TabsTrigger value="funds"><Landmark className="mr-2 h-4 w-4" />Fondos</TabsTrigger>
-                            <TabsTrigger value="history"><Trophy className="mr-2 h-4 w-4" />Historial</TabsTrigger>
+                            <TabsTrigger value="history"><Trophy className="mr-2 h-4 w-4" />Ganadores</TabsTrigger>
+                            <TabsTrigger value="raffles"><FileClock className="mr-2 h-4 w-4" />Sorteos</TabsTrigger>
                         </TabsList>
                         <TabsContent value="participants" className="mt-6">
                             <ParticipantManager onRaffleSaved={onDataChange} />
@@ -191,6 +196,9 @@ export default function AdminDashboard({ initialFunds, initialWinners, initialWi
                         </TabsContent>
                         <TabsContent value="history" className="mt-6">
                             <WinnerHistory winners={initialWinners} />
+                        </TabsContent>
+                        <TabsContent value="raffles" className="mt-6">
+                            <RaffleHistory raffles={initialRaffles} />
                         </TabsContent>
                     </Tabs>
                 </main>
