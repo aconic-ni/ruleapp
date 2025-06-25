@@ -14,8 +14,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Funds, Withdrawal } from '@/lib/data';
-import Link from 'next/link';
 import { Eye } from 'lucide-react';
+import WithdrawalReceipt from '@/components/admin/WithdrawalReceipt';
+import PrintButton from '@/components/PrintButton';
 
 interface FundsManagerProps {
     funds: Funds;
@@ -33,7 +34,8 @@ const withdrawalSchema = z.object({
 type WithdrawalFormValues = z.infer<typeof withdrawalSchema>;
 
 export default function FundsManager({ funds, withdrawals, onAddWithdrawal }: FundsManagerProps) {
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isRequestDialogOpen, setIsRequestDialogOpen] = useState(false);
+    const [viewingWithdrawal, setViewingWithdrawal] = useState<Withdrawal | null>(null);
 
     const form = useForm<WithdrawalFormValues>({
         resolver: zodResolver(withdrawalSchema),
@@ -58,7 +60,7 @@ export default function FundsManager({ funds, withdrawals, onAddWithdrawal }: Fu
 
         await onAddWithdrawal(data);
         form.reset();
-        setIsDialogOpen(false);
+        setIsRequestDialogOpen(false);
     };
 
 
@@ -86,7 +88,7 @@ export default function FundsManager({ funds, withdrawals, onAddWithdrawal }: Fu
                     </div>
                 </CardContent>
                 <CardFooter>
-                    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
                         <DialogTrigger asChild>
                             <Button>Solicitar Retiro</Button>
                         </DialogTrigger>
@@ -168,10 +170,8 @@ export default function FundsManager({ funds, withdrawals, onAddWithdrawal }: Fu
                                         <TableCell className="text-muted-foreground">{w.date}</TableCell>
                                         <TableCell className="text-right font-semibold">${w.amount.toLocaleString()}</TableCell>
                                         <TableCell className="text-right">
-                                            <Button asChild variant="ghost" size="icon">
-                                                <Link href={`/admin/withdrawals/${w.id}`} title="Ver / Imprimir Recibo">
-                                                    <Eye className="h-4 w-4" />
-                                                </Link>
+                                            <Button variant="ghost" size="icon" onClick={() => setViewingWithdrawal(w)} title="Ver / Imprimir Recibo">
+                                                <Eye className="h-4 w-4" />
                                             </Button>
                                         </TableCell>
                                     </TableRow>
@@ -185,6 +185,18 @@ export default function FundsManager({ funds, withdrawals, onAddWithdrawal }: Fu
                     </div>
                 </CardContent>
             </Card>
+
+            <Dialog open={!!viewingWithdrawal} onOpenChange={(isOpen) => { if (!isOpen) setViewingWithdrawal(null) }}>
+                <DialogContent className="sm:max-w-2xl">
+                    {viewingWithdrawal && <WithdrawalReceipt withdrawal={viewingWithdrawal} />}
+                    <DialogFooter className="no-print justify-end gap-2">
+                        <PrintButton />
+                        <DialogClose asChild>
+                            <Button type="button" variant="secondary">Cerrar</Button>
+                        </DialogClose>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

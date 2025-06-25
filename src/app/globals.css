@@ -87,11 +87,26 @@
   .no-print {
     display: none !important;
   }
-  .card {
-    box-shadow: none !important;
-    border: none !important;
+  
+  body > #__next {
+    display: none !important;
   }
-  main {
-    padding-top: 0 !important;
+
+  /* Hide the dialog overlay */
+  div[data-radix-dialog-portal] > div[class*="bg-black/80"] {
+      display: none !important;
+  }
+
+  /* Style the dialog content for printing */
+  div[data-radix-dialog-portal] [role="dialog"] {
+      position: absolute !important;
+      inset: 0 !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      border: none !important;
+      box-shadow: none !important;
+      border-radius: 0 !important;
+      padding: 2rem !important;
+      animation: none !important;
   }
 }
