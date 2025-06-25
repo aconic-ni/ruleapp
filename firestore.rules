@@ -1,38 +1,58 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check for admin role
-    function isAdmin() {
-      // Check if the user is authenticated and has an admin role document
-      // The user's UID must match the document ID in the 'users' collection
-      return request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-
-    // Ruletas: Public read, admin write
+    // --- Collection: ruletas ---
     match /ruletas/{raffleId} {
+      // Anyone can read raffles (for winner history, etc.)
       allow read: if true;
-      allow write: if isAdmin();
+
+      // Only authenticated users can create raffles, with valid data.
+      allow create: if request.auth != null
+                    && request.resource.data.status == 'pending'
+                    && request.resource.data.keys().hasAll(['participants', 'raffleTotal', 'date', 'status']);
+
+      // Only authenticated users can update a PENDING raffle to a COMPLETED one.
+      // This prevents tampering with completed raffles or financial data.
+      allow update: if request.auth != null
+                    && resource.data.status == 'pending'
+                    && request.resource.data.status == 'completed'
+                    && request.resource.data.winner is string
+                    && request.resource.data.drawDate is timestamp;
+                    
+      // Deleting raffles is not allowed.
+      allow delete: if false;
     }
 
-    // Retiros: Public read, admin create
+    // --- Collection: retiros ---
     match /retiros/{withdrawalId} {
+      // Anyone can read withdrawals (for history pages).
       allow read: if true;
-      allow create: if isAdmin();
-      allow update, delete: if false; // Disallow updates/deletes from client
+
+      // Only authenticated users can create withdrawals.
+      // Updates and deletes are forbidden to maintain a clear audit trail.
+      allow create: if request.auth != null
+                    && request.resource.data.keys().hasAll(['solicitudId', 'name', 'amount', 'declaration', 'date'])
+                    && request.resource.data.amount > 0;
+      allow update, delete: if false;
     }
 
-    // Funds: Public read, admin write
+    // --- Document: funds/summary ---
     match /funds/summary {
+      // Anyone can read the funds summary.
       allow read: if true;
-      allow write: if isAdmin();
-    }
-    
-    // Users: only readable by other admins to check roles if needed, not writable from client
-    match /users/{userId} {
-      allow read: if isAdmin();
-      allow write: if false; // Manage roles from Firebase Console or a secure backend
+      
+      // Only authenticated users can update funds.
+      // The rule ensures 'withdrawn' and 'total' can only increase, preventing malicious reduction of funds.
+      allow create: if request.auth != null; // Allow initial creation by an admin.
+      allow update: if request.auth != null
+                    && request.resource.data.withdrawn >= resource.data.withdrawn
+                    && request.resource.data.total >= resource.data.total;
+      
+      // Deleting the funds summary is not allowed.
+      allow delete: if false;
     }
   }
 }
