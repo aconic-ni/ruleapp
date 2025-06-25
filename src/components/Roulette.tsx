@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useMemo } from 'react';
@@ -20,7 +21,6 @@ interface RouletteProps {
   onSpinEnd: (winnerName: string) => void;
 }
 
-// Expanded color palette to avoid adjacent repeats for up to 50 participants
 const COLORS = [
   "#42A5F5", "#FF7043", "#66BB6A", "#FFCA28", "#26C6DA", "#EC407A", "#9CCC65", "#7E57C2",
   "#29B6F6", "#FFA726", "#8D6E63", "#EF5350", "#AB47BC", "#5C6BC0", "#26A69A", "#FFEE58",
@@ -31,7 +31,6 @@ const COLORS = [
 ];
 const SPIN_DURATION_SECONDS = 8;
 
-// Fisher-Yates shuffle algorithm for a good shuffle
 const shuffleArray = (array: Participant[]) => {
   let currentIndex = array.length, randomIndex;
   const newArray = [...array];
@@ -73,12 +72,17 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
     const winnerIndex = Math.floor(Math.random() * numParticipants);
     const winnerData = shuffledParticipants[winnerIndex];
     
-    const winnerSegmentCenter = (segmentDegrees * winnerIndex) + (segmentDegrees / 2);
-    const targetAngle = 360 - winnerSegmentCenter;
+    // Angle of the center of the winning segment, with 0 degrees at the top.
+    const winnerAngle = segmentDegrees * winnerIndex;
 
+    // We need to rotate by -winnerAngle to bring it to the top.
+    const targetRotation = -winnerAngle;
+    
     const extraSpins = (8 + Math.floor(Math.random() * 4)) * 360;
-    const currentAngle = rotation % 360;
-    const newRotation = rotation - currentAngle + extraSpins + targetAngle;
+    
+    // The new absolute rotation
+    // We subtract the current remainder to start from a clean slate, then add spins and the target.
+    const newRotation = rotation - (rotation % 360) + extraSpins + targetRotation;
     
     setRotation(newRotation);
 
@@ -97,12 +101,14 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
     if (numParticipants === 0) {
       return { background: 'hsl(var(--muted))' };
     }
+    // Start the gradient so the dividing line is at the top (our 0-degree point)
+    const gradientStartAngle = -segmentDegrees / 2;
     const gradientParts = shuffledParticipants.map((p, i) => {
       const start = i * segmentDegrees;
       const end = (i + 1) * segmentDegrees;
       return `${COLORS[i % COLORS.length]} ${start}deg ${end}deg`;
     });
-    return { background: `conic-gradient(from 180deg, ${gradientParts.join(', ')})` };
+    return { background: `conic-gradient(from ${gradientStartAngle}deg, ${gradientParts.join(', ')})` };
   }, [shuffledParticipants, segmentDegrees, numParticipants]);
 
 
@@ -140,17 +146,19 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
         </div>
         
         <div
-          className="relative w-full h-full rounded-full border-8 border-accent bg-background shadow-2xl"
+          className="relative w-full h-full rounded-full border-8 border-accent bg-background shadow-2xl overflow-hidden"
           style={{ 
             transform: `rotate(${rotation}deg)`,
             transition: isSpinning ? `transform ${SPIN_DURATION_SECONDS}s cubic-bezier(0.25, 1, 0.5, 1)` : 'none'
           }}
         >
-            <div className="absolute inset-0" style={wheelStyle} />
+            <div className="absolute inset-0 rounded-full" style={wheelStyle} />
 
             {numParticipants > 0 && shuffledParticipants.map((participant, index) => {
-              const angle = segmentDegrees * index + (segmentDegrees / 2);
-              const textRadius = 42.5;
+              // The center of the segment, with 0 degrees at the top
+              const angle = segmentDegrees * index;
+              const textRadius = 42.5; // Percentage from center to place the text
+              // Convert our "top=0" angle to the "right=0" angle for Math.cos/sin
               const angleRad = (angle - 90) * (Math.PI / 180);
               const x = 50 + textRadius * Math.cos(angleRad);
               const y = 50 + textRadius * Math.sin(angleRad);
