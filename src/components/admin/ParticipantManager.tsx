@@ -7,39 +7,44 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from "@/hooks/use-toast";
+import type { Participant } from '@/lib/data';
 
 interface ParticipantManagerProps {
-    participants: string[];
-    onAddParticipant: (name: string) => void;
+    participants: Participant[];
+    onAddParticipant: (name: string, ticketValue: number) => void;
 }
 
 export default function ParticipantManager({ participants, onAddParticipant }: ParticipantManagerProps) {
     const [newName, setNewName] = useState('');
+    const [ticketValue, setTicketValue] = useState(25);
     const { toast } = useToast();
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (newName.trim() === '') {
-            toast({
-                title: "Error",
-                description: "El nombre no puede estar vacío.",
-                variant: "destructive"
-            });
+            toast({ title: "Error", description: "El nombre no puede estar vacío.", variant: "destructive" });
             return;
         }
-        onAddParticipant(newName);
-        setNewName('');
+        if (ticketValue <= 0) {
+            toast({ title: "Error", description: "El valor del boleto debe ser positivo.", variant: "destructive" });
+            return;
+        }
+
+        onAddParticipant(newName, ticketValue);
+        
         toast({
             title: "Éxito",
-            description: `Participante "${newName}" agregado.`,
+            description: `Participante "${newName}" agregado con un boleto de $${ticketValue}.`,
         });
+        setNewName('');
+        setTicketValue(25);
     };
 
     return (
         <Card className="shadow-lg">
             <CardHeader>
-                <CardTitle className="font-headline">Gestionar Participantes</CardTitle>
-                <CardDescription>Añade nuevos participantes a la tómbola. Los nombres pueden repetirse para aumentar las probabilidades.</CardDescription>
+                <CardTitle className="font-headline">Gestionar Participantes de la Tómbola Actual</CardTitle>
+                <CardDescription>Añade nuevos participantes. Al finalizar la tómbola, esta lista se reiniciará.</CardDescription>
             </CardHeader>
             <CardContent className="grid md:grid-cols-2 gap-8">
                 <div>
@@ -53,6 +58,16 @@ export default function ParticipantManager({ participants, onAddParticipant }: P
                                 placeholder="Ej: Juan Pérez"
                             />
                         </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="ticket-value">Valor del Boleto</Label>
+                            <Input
+                                id="ticket-value"
+                                type="number"
+                                value={ticketValue}
+                                onChange={(e) => setTicketValue(Number(e.target.value))}
+                                placeholder="25"
+                            />
+                        </div>
                         <Button type="submit">Agregar Participante</Button>
                     </form>
                 </div>
@@ -62,12 +77,15 @@ export default function ParticipantManager({ participants, onAddParticipant }: P
                         {participants.length > 0 ? (
                             <ul className="space-y-1">
                             {participants.map((p, i) => (
-                                <li key={i} className="text-sm p-1 rounded-md transition-colors hover:bg-background">{i+1}. {p}</li>
+                                <li key={i} className="text-sm p-1 rounded-md transition-colors hover:bg-background flex justify-between">
+                                    <span>{i+1}. {p.name}</span>
+                                    <span className="font-mono text-muted-foreground">${p.ticketValue}</span>
+                                </li>
                             ))}
                             </ul>
                         ) : (
                             <div className="flex items-center justify-center h-full">
-                                <p className="text-sm text-muted-foreground">No hay participantes todavía.</p>
+                                <p className="text-sm text-muted-foreground">No hay participantes para la tómbola actual.</p>
                             </div>
                         )}
                     </ScrollArea>

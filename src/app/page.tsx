@@ -1,10 +1,9 @@
 import Header from '@/components/Header';
-import Roulette from '@/components/Roulette';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getParticipants, getFunds, getRecentWinners } from '@/lib/data';
+import { getFunds, getRecentWinners } from '@/lib/data';
+import { Ticket, DollarSign, Trophy } from 'lucide-react';
 
 export default async function Home() {
-  const participants = await getParticipants();
   const funds = await getFunds();
   const winners = await getRecentWinners();
 
@@ -14,30 +13,37 @@ export default async function Home() {
       <main className="flex-1 container mx-auto py-8 px-4">
         <div className="text-center mb-12">
           <h1 className="text-5xl md:text-6xl font-headline font-bold text-primary">Tómbola Mágica</h1>
-          <p className="text-muted-foreground mt-2 text-lg">Gira la ruleta y prueba tu suerte.</p>
+          <p className="text-muted-foreground mt-2 text-lg">Administra tus tómbolas y sigue los resultados.</p>
         </div>
         
-        <div className="grid md:grid-cols-3 gap-8 items-start">
-          <div className="md:col-span-2 flex items-center justify-center py-8">
-            <Roulette participants={participants} />
-          </div>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           
-          <div className="space-y-6">
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="font-headline">Fondos Totales</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-4xl font-bold text-accent">${(funds.total - funds.withdrawn).toLocaleString()}</p>
-                <p className="text-sm text-muted-foreground mt-1">Total recaudado: ${funds.total.toLocaleString()}</p>
-              </CardContent>
-            </Card>
-            
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="font-headline">Ganadores Recientes</CardTitle>
-              </CardHeader>
-              <CardContent>
+          <Card className="shadow-lg col-span-full lg:col-span-1">
+            <CardHeader>
+              <CardTitle className="font-headline flex items-center gap-2"><DollarSign/> Estado de Fondos</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between items-center border-b pb-2">
+                <span className="text-muted-foreground">Total Recaudado</span>
+                <span className="font-bold text-lg">${funds.total.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center border-b pb-2">
+                <span className="text-muted-foreground">Total Retirado</span>
+                <span className="font-bold text-lg text-destructive">${funds.withdrawn.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center pt-2">
+                <span className="font-semibold text-primary">Saldo Actual</span>
+                <span className="font-bold text-2xl text-primary">${(funds.total - funds.withdrawn).toLocaleString()}</span>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="shadow-lg col-span-full md:col-span-1 lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="font-headline flex items-center gap-2"><Trophy /> Ganadores Recientes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {winners.length > 0 ? (
                 <ul className="space-y-3">
                   {winners.map((winner, index) => (
                     <li key={index} className="flex justify-between items-center border-b pb-2 last:border-b-0">
@@ -46,18 +52,20 @@ export default async function Home() {
                     </li>
                   ))}
                 </ul>
-              </CardContent>
-            </Card>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>Aún no hay ganadores. ¡La próxima tómbola está por comenzar!</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="font-headline">Participantes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                 <p className="text-2xl font-bold text-accent">{participants.length} boletos</p>
-                 <p className="text-sm text-muted-foreground mt-1">en la tómbola actual</p>
-              </CardContent>
-            </Card>
+          <div className="md:col-span-2 lg:col-span-3 bg-card border border-dashed rounded-lg p-12 text-center flex flex-col items-center justify-center min-h-[300px]">
+            <Ticket className="h-16 w-16 text-primary/50 mb-4" />
+            <h2 className="text-2xl font-headline text-primary">Próximamente</h2>
+            <p className="text-muted-foreground mt-2 max-w-md">
+              El área de la ruleta ahora es exclusiva para administradores. Ingresa al panel de administración para iniciar una nueva tómbola.
+            </p>
           </div>
         </div>
       </main>
