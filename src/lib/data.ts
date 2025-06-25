@@ -34,6 +34,7 @@ export interface Withdrawal {
     name: string;
     amount: number;
     declaration: string;
+    observation: string;
     date: string;
 }
 
@@ -128,6 +129,7 @@ export async function getWithdrawals(): Promise<Withdrawal[]> {
                 name: data.name,
                 amount: data.amount,
                 declaration: data.declaration,
+                observation: data.observation || '',
                 date: formatDate(data.date),
             });
         });

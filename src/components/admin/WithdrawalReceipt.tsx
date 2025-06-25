@@ -24,8 +24,9 @@ export default function WithdrawalReceipt({ withdrawal }: WithdrawalReceiptProps
                         <span className="font-semibold text-gray-600">Nombre:</span>
                         <span>{withdrawal.name}</span>
                     </div>
-                    <div>
+                    <div className="flex justify-between">
                         <span className="font-semibold text-gray-600">Declaración:</span>
+                        <span className="font-mono">{withdrawal.declaration}</span>
                     </div>
                 </div>
 
@@ -36,7 +37,7 @@ export default function WithdrawalReceipt({ withdrawal }: WithdrawalReceiptProps
 
                 <div className="border rounded-lg p-4 mt-6 border-gray-300 bg-gray-50">
                     <p className="text-sm text-gray-700">
-                        {withdrawal.declaration}
+                        {withdrawal.observation}
                     </p>
                 </div>
             </div>

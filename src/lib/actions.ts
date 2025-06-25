@@ -126,6 +126,7 @@ export async function getWithdrawalById(id: string): Promise<Withdrawal | null> 
                 name: data.name,
                 amount: data.amount,
                 declaration: data.declaration,
+                observation: data.observation || '',
                 date: data.date.toDate().toISOString().split('T')[0],
             };
         } else {

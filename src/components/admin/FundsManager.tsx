@@ -28,7 +28,8 @@ const withdrawalSchema = z.object({
     solicitudId: z.string().min(1, "El ID de solicitud es requerido."),
     name: z.string().min(3, "El nombre es requerido."),
     amount: z.coerce.number().positive("El monto debe ser un número positivo."),
-    declaration: z.string().min(10, "La declaración es muy corta.").max(500, "La declaración es muy larga."),
+    declaration: z.string().min(1, "La declaración es requerida."),
+    observation: z.string().min(10, "La observación es muy corta.").max(500, "La observación es muy larga."),
 });
 
 type WithdrawalFormValues = z.infer<typeof withdrawalSchema>;
@@ -44,6 +45,7 @@ export default function FundsManager({ funds, withdrawals, onAddWithdrawal }: Fu
             name: '',
             amount: 0,
             declaration: '',
+            observation: '',
         }
     });
     
@@ -125,8 +127,15 @@ export default function FundsManager({ funds, withdrawals, onAddWithdrawal }: Fu
                                         )} />
                                         <FormField control={form.control} name="declaration" render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Declaración</FormLabel>
-                                                <FormControl><Textarea placeholder="Motivo del retiro..." {...field} /></FormControl>
+                                                <FormLabel>Declaración (Código)</FormLabel>
+                                                <FormControl><Input placeholder="Ej: L45868/1" {...field} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
+                                        <FormField control={form.control} name="observation" render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Observación</FormLabel>
+                                                <FormControl><Textarea placeholder="Motivo del retiro, detalles..." {...field} /></FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )} />
