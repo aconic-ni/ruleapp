@@ -17,7 +17,7 @@ interface RouletteProps {
   participants: string[];
 }
 
-const COLORS = ["#A020F0", "#663399", "#FFC107", "#FF5722", "#4CAF50", "#2196F3", "#E91E63", "#00BCD4"];
+const COLORS = ["#3B82F6", "#0EA5E9", "#FFC107", "#FF5722", "#4CAF50", "#2196F3", "#E91E63", "#00BCD4"];
 
 export default function Roulette({ participants = [] }: RouletteProps) {
   const [isSpinning, setIsSpinning] = useState(false);
