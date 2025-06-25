@@ -39,13 +39,16 @@ export interface Withdrawal {
 
 function formatDate(timestamp: Timestamp): string {
     if (!timestamp || typeof timestamp.toDate !== 'function') {
-        // Fallback for unexpected data, though Firestore timestamps should always have toDate
         return new Date().toISOString().split('T')[0];
     }
     return timestamp.toDate().toISOString().split('T')[0];
 }
 
 export async function getFunds(): Promise<Funds> {
+    if (!db) {
+        console.error("Database not available, returning default funds.");
+        return { total: 0, withdrawn: 0 };
+    }
     try {
         const fundsDocRef = doc(db, 'funds', 'summary');
         const fundsDoc = await getDoc(fundsDocRef);
@@ -55,11 +58,14 @@ export async function getFunds(): Promise<Funds> {
     } catch (error) {
         console.error("Error fetching funds: ", error);
     }
-    // Return default if doc doesn't exist or on error
     return { total: 0, withdrawn: 0 };
 }
 
 export async function getRecentWinners(): Promise<Winner[]> {
+    if (!db) {
+        console.error("Database not available, returning empty winners list.");
+        return [];
+    }
     const winners: Winner[] = [];
     try {
         const q = query(
@@ -86,6 +92,10 @@ export async function getRecentWinners(): Promise<Winner[]> {
 }
 
 export async function getAllWinners(): Promise<Winner[]> {
+    if (!db) {
+        console.error("Database not available, returning empty winners list.");
+        return [];
+    }
     const winners: Winner[] = [];
      try {
         const q = query(
@@ -111,6 +121,10 @@ export async function getAllWinners(): Promise<Winner[]> {
 }
 
 export async function getWithdrawals(): Promise<Withdrawal[]> {
+    if (!db) {
+        console.error("Database not available, returning empty withdrawals list.");
+        return [];
+    }
     const withdrawals: Withdrawal[] = [];
     try {
         const q = query(collection(db, 'retiros'), orderBy('date', 'desc'));

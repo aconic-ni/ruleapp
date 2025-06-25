@@ -49,6 +49,14 @@ export default function AdminDashboard({ initialFunds, initialWinners, initialWi
     }
 
     const handleLogout = async () => {
+        if (!auth) {
+            toast({
+                title: "Error",
+                description: "El servicio de autenticación no está disponible.",
+                variant: "destructive",
+            });
+            return;
+        }
         try {
             await signOut(auth);
             router.push('/');

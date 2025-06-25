@@ -1,8 +1,10 @@
+'use client';
+
 // Import the functions you need from the SDKs you need
-import { initializeApp, getApp, getApps } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-import { getAnalytics } from "firebase/analytics";
-import { getAuth } from "firebase/auth";
+import { initializeApp, getApp, getApps, FirebaseApp } from "firebase/app";
+import { getFirestore, Firestore } from "firebase/firestore";
+import { getAnalytics, Analytics } from "firebase/analytics";
+import { getAuth, Auth } from "firebase/auth";
 
 // Use environment variables for Firebase config for security and flexibility.
 // These variables must be prefixed with NEXT_PUBLIC_ to be exposed to the browser.
@@ -18,12 +20,18 @@ const firebaseConfig = {
 
 
 // Initialize Firebase
-// This pattern prevents re-initializing the app on hot-reloads.
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const db = getFirestore(app);
-const auth = getAuth(app);
+// This pattern prevents re-initializing the app on hot-reloads,
+// and ensures it only runs on the client side.
+const app: FirebaseApp | null = typeof window !== 'undefined' && firebaseConfig.apiKey
+    ? !getApps().length ? initializeApp(firebaseConfig) : getApp()
+    : null;
 
-// Initialize Analytics if running in the browser
-const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
+const db: Firestore | null = app ? getFirestore(app) : null;
+const auth: Auth | null = app ? getAuth(app) : null;
+const analytics: Analytics | null = app && typeof window !== 'undefined' ? getAnalytics(app) : null;
+
+if (typeof window !== 'undefined' && !firebaseConfig.apiKey) {
+    console.error("Firebase API key is missing. Please make sure NEXT_PUBLIC_FIREBASE_* environment variables are set.");
+}
 
 export { app, db, auth, analytics };
