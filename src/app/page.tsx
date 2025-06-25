@@ -12,7 +12,7 @@ export default async function Home() {
       <Header />
       <main className="flex-1 container mx-auto py-8 px-4">
         <div className="text-center mb-12">
-          <h1 className="text-5xl md:text-6xl font-headline font-bold text-primary">Tómbola Mágica</h1>
+          <h1 className="text-5xl md:text-6xl font-headline font-bold text-primary">RuleApp</h1>
           <p className="text-muted-foreground mt-2 text-lg">Administra tus tómbolas y sigue los resultados.</p>
         </div>
         
