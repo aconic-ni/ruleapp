@@ -1,0 +1,32 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default: Lock down all access.
+    // Individual rules below will open up specific paths.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Allow public read access for winners history, funds, and withdrawal history.
+    // Writes are denied, they must go through the server-side actions.
+    match /ruletas/{raffleId} {
+      allow read: if true;
+      allow write: if false; // Writes only allowed from the server
+    }
+
+    match /retiros/{withdrawalId} {
+      allow read: if true;
+      allow write: if false; // Writes only allowed from the server
+    }
+
+    // Allow public read on the funds summary document.
+    // Writes are denied, they must go through server-side actions which use increments.
+    match /funds/summary {
+      allow read: if true;
+      allow write: if false; // Writes only allowed from the server
+    }
+  }
+}
