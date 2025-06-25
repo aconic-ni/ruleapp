@@ -94,7 +94,10 @@ export default function AdminDashboard({ initialParticipants, initialFunds, init
             <div className='flex-1'>
                 <header className="bg-card shadow-sm">
                     <div className="container mx-auto p-4 flex justify-between items-center">
-                        <div className="text-xl font-headline text-primary">Panel de Administrador</div>
+                        <div className="flex items-center gap-3 text-xl font-headline font-bold text-primary">
+                            <Ticket className="h-6 w-6" />
+                            RuleApp
+                        </div>
                         <Button variant="outline" onClick={handleLogout}>
                             <LogOut className="mr-2 h-4 w-4" />
                             Cerrar Sesión
