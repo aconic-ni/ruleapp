@@ -2,6 +2,7 @@ import Header from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getFunds, getRecentWinners } from '@/lib/data';
 import { Ticket, DollarSign, Trophy } from 'lucide-react';
+import Footer from '@/components/Footer';
 
 export default async function Home() {
   const funds = await getFunds();
@@ -69,6 +70,7 @@ export default async function Home() {
           </div>
         </div>
       </main>
+      <Footer />
     </div>
   );
 }

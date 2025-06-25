@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { KeyRound } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import Footer from '@/components/Footer';
 
 const ADMIN_PASSWORD = "password123"; // In a real app, this would be handled securely on the server.
 
@@ -46,38 +47,41 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-sm shadow-2xl">
-        <form onSubmit={handleLogin}>
-          <CardHeader className="text-center">
-            <div className="mx-auto bg-primary text-primary-foreground p-3 rounded-full w-fit mb-4">
-              <KeyRound className="h-8 w-8" />
-            </div>
-            <CardTitle className="font-headline text-2xl">Acceso de Administrador</CardTitle>
-            <CardDescription>Ingresa la contraseña para gestionar la tómbola.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  placeholder="********"
-                />
+    <div className="flex flex-col min-h-screen bg-background">
+      <main className="flex-1 flex items-center justify-center px-4">
+        <Card className="w-full max-w-sm shadow-2xl">
+          <form onSubmit={handleLogin}>
+            <CardHeader className="text-center">
+              <div className="mx-auto bg-primary text-primary-foreground p-3 rounded-full w-fit mb-4">
+                <KeyRound className="h-8 w-8" />
               </div>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Verificando...' : 'Iniciar Sesión'}
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
+              <CardTitle className="font-headline text-2xl">Acceso de Administrador</CardTitle>
+              <CardDescription>Ingresa la contraseña para gestionar la tómbola.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="password">Contraseña</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    placeholder="********"
+                  />
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? 'Verificando...' : 'Iniciar Sesión'}
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
+      </main>
+      <Footer />
     </div>
   );
 }

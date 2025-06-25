@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { getFunds } from '@/lib/data';
 import { DollarSign } from 'lucide-react';
 import PrintButton from '@/components/PrintButton';
+import Footer from '@/components/Footer';
 
 export default async function FundsPage() {
   const funds = await getFunds();
@@ -39,6 +40,7 @@ export default async function FundsPage() {
           </CardFooter>
         </Card>
       </main>
+      <Footer />
     </div>
   );
 }

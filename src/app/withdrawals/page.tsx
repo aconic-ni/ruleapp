@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { getWithdrawals } from '@/lib/data';
 import { History } from 'lucide-react';
 import PrintButton from '@/components/PrintButton';
+import Footer from '@/components/Footer';
 
 export default async function WithdrawalsPage() {
     const withdrawals = await getWithdrawals();
@@ -57,6 +58,7 @@ export default async function WithdrawalsPage() {
                   </CardFooter>
               </Card>
             </main>
+            <Footer />
         </div>
     );
 }
