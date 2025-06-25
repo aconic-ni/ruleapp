@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Star, Shuffle } from 'lucide-react';
 import {
@@ -13,6 +13,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import type { Participant } from '@/lib/data';
+import { cn } from '@/lib/utils';
 
 interface RouletteProps {
   participants: Participant[];
@@ -33,36 +34,53 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
     setShuffledParticipants([...participants].sort(() => Math.random() - 0.5));
   }, [participants]);
   
-  const segmentDegrees = shuffledParticipants.length > 0 ? 360 / shuffledParticipants.length : 360;
+  const numParticipants = shuffledParticipants.length;
+  const segmentDegrees = numParticipants > 0 ? 360 / numParticipants : 360;
 
   const handleShuffle = () => {
-    setShuffledParticipants([...participants].sort(() => Math.random() - 0.5));
+    if(isSpinning) return;
+    setShuffledParticipants([...shuffledParticipants].sort(() => Math.random() - 0.5));
   }
 
   const handleSpin = () => {
-    if (isSpinning || shuffledParticipants.length === 0) return;
+    if (isSpinning || numParticipants === 0) return;
 
     setIsSpinning(true);
     setWinner(null);
-    const winnerIndex = Math.floor(Math.random() * shuffledParticipants.length);
+
+    const winnerIndex = Math.floor(Math.random() * numParticipants);
     const winnerData = shuffledParticipants[winnerIndex];
 
     const winnerSegmentStart = segmentDegrees * winnerIndex;
     const winnerSegmentCenter = winnerSegmentStart + (segmentDegrees / 2);
     const targetRotation = 360 - winnerSegmentCenter;
 
-    const extraSpins = Math.floor(Math.random() * 6) + 5;
-    const totalRotation = rotation - (rotation % 360) + (360 * extraSpins) + targetRotation;
+    const extraSpins = Math.floor(Math.random() * 6) + 8; // 8 to 13 spins
+    // Ensure the wheel always spins forward
+    const newRotation = rotation - (rotation % 360) + (360 * extraSpins) + targetRotation;
 
-    setRotation(totalRotation);
+    setRotation(newRotation);
 
     setTimeout(() => {
       setIsSpinning(false);
       setWinner(winnerData.name);
       setShowWinnerDialog(true);
       onSpinEnd(winnerData.name);
-    }, 6000); 
+    }, 8000); // Must match animation duration
   };
+
+  const wheelStyle = useMemo(() => {
+    if (numParticipants === 0) {
+      return { background: 'hsl(var(--muted))' };
+    }
+    const gradientParts = shuffledParticipants.map((p, i) => {
+      const start = i * segmentDegrees;
+      const end = (i + 1) * segmentDegrees;
+      return `${COLORS[i % COLORS.length]} ${start}deg ${end}deg`;
+    });
+    return { background: `conic-gradient(from 0deg, ${gradientParts.join(', ')})` };
+  }, [shuffledParticipants, segmentDegrees, numParticipants]);
+
 
   if (participants.length === 0) {
     return (
@@ -90,34 +108,40 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
       </AlertDialog>
 
       <div className="relative w-80 h-80 md:w-96 md:h-96 flex items-center justify-center">
-        <div style={{ clipPath: 'polygon(50% 0, 100% 100%, 0 100%)' }} className="absolute -top-1 w-8 h-10 bg-accent z-10" />
+        {/* Pointer */}
+        <div style={{ clipPath: 'polygon(50% 100%, 0 0, 100% 0)' }} className="absolute top-0 w-8 h-10 bg-accent z-10 transform -translate-y-1/2" />
         
         <div
-          className="relative w-full h-full rounded-full border-8 border-accent bg-background shadow-2xl overflow-hidden transition-transform duration-[6000ms] ease-out"
-          style={{ transform: `rotate(${rotation}deg)` }}
+          className="relative w-full h-full rounded-full border-8 border-accent bg-background shadow-2xl overflow-hidden transition-transform duration-[8000ms] ease-out"
+          style={{ 
+            transform: `rotate(${rotation}deg)`,
+            ...wheelStyle
+          }}
         >
-          {shuffledParticipants.map((participant, index) => {
-            const rotate = index * segmentDegrees;
-            const skew = 90 - segmentDegrees;
-            return (
-              <div
-                key={index}
-                className="absolute w-1/2 h-1/2 origin-bottom-right"
-                style={{
-                  transform: `rotate(${rotate}deg) skewY(${skew > 0 ? skew : 0}deg)`,
-                  background: COLORS[index % COLORS.length]
-                }}
-              >
-                <div 
-                  className="absolute w-[160%] h-full flex items-center justify-center text-white -translate-y-1/2"
-                  style={{ 
-                    transform: `skewY(${skew > 0 ? -skew : 0}deg) rotate(${segmentDegrees/2}deg) translate(-25%, -50%)`,
+          {/* Labels */}
+          {numParticipants > 0 && shuffledParticipants.map((participant, index) => {
+              const angle = segmentDegrees * index + (segmentDegrees / 2); // Angle to center of segment
+              const radiusPercent = 35; // 35% from the center
+              const angleRad = (angle - 90) * (Math.PI / 180); // adjust by -90 because 0deg is right, we want it to be top
+              const x = radiusPercent * Math.cos(angleRad);
+              const y = radiusPercent * Math.sin(angleRad);
+              
+              return (
+                <div
+                  key={`${participant.number}-${index}`}
+                  className="absolute top-1/2 left-1/2 flex items-center justify-center"
+                  style={{
+                    transform: `translate(-50%, -50%) translate(${x}%, ${y}%) rotate(${angle}deg)`
                   }}
                 >
-                  <span className="block text-center font-headline font-bold text-2xl md:text-3xl">#{participant.number}</span>
+                  <span
+                    className="block text-center font-headline font-bold text-2xl md:text-3xl text-white"
+                    style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.7), 0 0 5px rgba(0,0,0,0.5)' }}
+                  >
+                    #{participant.number}
+                  </span>
                 </div>
-              </div>
-            )
+              )
           })}
         </div>
       </div>
@@ -128,7 +152,7 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
             Mezclar
         </Button>
         <Button onClick={handleSpin} disabled={isSpinning} size="lg" className="font-bold text-lg px-8 py-6 rounded-full shadow-lg">
-            <Star className="mr-2 h-5 w-5 animate-pulse" />
+            <Star className={cn("mr-2 h-5 w-5", isSpinning && "animate-spin")} />
             {isSpinning ? 'Girando...' : 'Girar la Tómbola'}
         </Button>
       </div>
