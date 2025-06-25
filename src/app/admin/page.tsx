@@ -32,16 +32,6 @@ export default function AdminLoginPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    if (!auth) {
-      toast({
-          title: "Error de Configuración",
-          description: "El servicio de autenticación no está disponible.",
-          variant: "destructive",
-      });
-      setIsLoading(false);
-      return;
-    }
-
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (error: any) {

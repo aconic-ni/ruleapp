@@ -2,12 +2,7 @@ import { db } from './firebase';
 import { collection, doc, addDoc, updateDoc, getDoc, runTransaction, Timestamp } from 'firebase/firestore';
 import type { Participant, Withdrawal, Raffle } from './data';
 
-const DB_UNAVAILABLE_ERROR = "La base de datos no está disponible. Revisa la configuración de Firebase.";
-
 export async function createRaffle(participants: Participant[]): Promise<string> {
-    if (!db) {
-        throw new Error(DB_UNAVAILABLE_ERROR);
-    }
     if (participants.length === 0) {
         throw new Error("Participants are required to create a raffle.");
     }
@@ -45,9 +40,6 @@ export async function createRaffle(participants: Participant[]): Promise<string>
 }
 
 export async function setRaffleWinner(raffleId: string, winnerName: string): Promise<void> {
-    if (!db) {
-        throw new Error(DB_UNAVAILABLE_ERROR);
-    }
     if (!raffleId || !winnerName) {
         throw new Error("Raffle ID and winner name are required.");
     }
@@ -66,9 +58,6 @@ export async function setRaffleWinner(raffleId: string, winnerName: string): Pro
 }
 
 export async function addWithdrawal(withdrawalRequest: Omit<Withdrawal, 'id' | 'date'>): Promise<void> {
-    if (!db) {
-        throw new Error(DB_UNAVAILABLE_ERROR);
-    }
     if (!withdrawalRequest.name || withdrawalRequest.amount <= 0) {
         throw new Error("Invalid withdrawal data.");
     }
@@ -98,10 +87,6 @@ export async function addWithdrawal(withdrawalRequest: Omit<Withdrawal, 'id' | '
 }
 
 export async function getRaffleById(id: string): Promise<Raffle | null> {
-    if (!db) {
-        console.error(DB_UNAVAILABLE_ERROR);
-        return null;
-    }
     try {
         const docRef = doc(db, 'ruletas', id);
         const docSnap = await getDoc(docRef);
@@ -128,10 +113,6 @@ export async function getRaffleById(id: string): Promise<Raffle | null> {
 }
 
 export async function getWithdrawalById(id: string): Promise<Withdrawal | null> {
-    if (!db) {
-        console.error(DB_UNAVAILABLE_ERROR);
-        return null;
-    }
     try {
         const docRef = doc(db, 'retiros', id);
         const docSnap = await getDoc(docRef);
