@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -8,19 +9,18 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from "@/hooks/use-toast";
 import type { Participant } from '@/lib/data';
+import { createRaffle } from '@/lib/actions';
+import { Loader2 } from 'lucide-react';
 
-interface ParticipantManagerProps {
-    participants: Participant[];
-    onAddParticipant: (name: string, ticketValue: number, number: number) => void;
-}
-
-export default function ParticipantManager({ participants, onAddParticipant }: ParticipantManagerProps) {
+export default function ParticipantManager() {
+    const [participants, setParticipants] = useState<Participant[]>([]);
     const [newName, setNewName] = useState('');
     const [ticketValue, setTicketValue] = useState(25);
     const [participantNumber, setParticipantNumber] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleAddParticipant = (e: React.FormEvent) => {
         e.preventDefault();
         const num = parseInt(participantNumber, 10);
 
@@ -41,26 +41,44 @@ export default function ParticipantManager({ participants, onAddParticipant }: P
             return;
         }
 
-        onAddParticipant(newName, ticketValue, num);
+        const newParticipant: Participant = { name: newName.trim(), ticketValue, number: num };
+        setParticipants(prev => [...prev, newParticipant]);
         
-        toast({
-            title: "Éxito",
-            description: `Participante "${newName}" agregado con el número ${num} y un boleto de $${ticketValue}.`,
-        });
         setNewName('');
         setTicketValue(25);
         setParticipantNumber('');
     };
 
+    const handleSaveRaffle = async () => {
+        if (participants.length === 0) {
+            toast({ title: "Error", description: "Agrega al menos un participante para guardar la ruleta.", variant: "destructive" });
+            return;
+        }
+        setIsSaving(true);
+        try {
+            const newRaffleId = await createRaffle(participants);
+            toast({
+                title: "Ruleta Guardada con Éxito",
+                description: `ID de la Ruleta: ${newRaffleId}. Ya puedes jugarla en la pestaña 'Ruleta'.`,
+                duration: 8000
+            });
+            setParticipants([]); // Clear participants for the next raffle
+        } catch (error) {
+            toast({ title: "Error al Guardar", description: "No se pudo guardar la ruleta.", variant: "destructive" });
+        } finally {
+            setIsSaving(false);
+        }
+    }
+
     return (
         <Card className="shadow-lg">
             <CardHeader>
-                <CardTitle className="font-headline">Gestionar Participantes de la Tómbola Actual</CardTitle>
-                <CardDescription>Añade nuevos participantes. Al finalizar la tómbola, esta lista se reiniciará.</CardDescription>
+                <CardTitle className="font-headline">Crear Nueva Ruleta</CardTitle>
+                <CardDescription>Añade los participantes y luego guarda la ruleta para poder jugarla.</CardDescription>
             </CardHeader>
             <CardContent className="grid md:grid-cols-2 gap-8">
                 <div>
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <form onSubmit={handleAddParticipant} className="space-y-4">
                         <div className="space-y-2">
                             <Label htmlFor="new-participant">Nombre del Participante</Label>
                             <Input
@@ -68,6 +86,7 @@ export default function ParticipantManager({ participants, onAddParticipant }: P
                                 value={newName}
                                 onChange={(e) => setNewName(e.target.value)}
                                 placeholder="Ej: Juan Pérez"
+                                disabled={isSaving}
                             />
                         </div>
                         <div className="space-y-2">
@@ -78,6 +97,7 @@ export default function ParticipantManager({ participants, onAddParticipant }: P
                                 value={ticketValue}
                                 onChange={(e) => setTicketValue(Number(e.target.value))}
                                 placeholder="25"
+                                disabled={isSaving}
                             />
                         </div>
                         <div className="space-y-2">
@@ -90,9 +110,10 @@ export default function ParticipantManager({ participants, onAddParticipant }: P
                                 value={participantNumber}
                                 onChange={(e) => setParticipantNumber(e.target.value)}
                                 placeholder="Ej: 7"
+                                disabled={isSaving}
                             />
                         </div>
-                        <Button type="submit">Agregar Participante</Button>
+                        <Button type="submit" disabled={isSaving}>Agregar Participante</Button>
                     </form>
                 </div>
                 <div>
@@ -112,12 +133,18 @@ export default function ParticipantManager({ participants, onAddParticipant }: P
                             </ul>
                         ) : (
                             <div className="flex items-center justify-center h-full">
-                                <p className="text-sm text-muted-foreground">No hay participantes para la tómbola actual.</p>
+                                <p className="text-sm text-muted-foreground">Añade participantes para crear una nueva ruleta.</p>
                             </div>
                         )}
                     </ScrollArea>
                 </div>
             </CardContent>
+            <CardFooter>
+                 <Button onClick={handleSaveRaffle} disabled={isSaving || participants.length === 0}>
+                    {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isSaving ? "Guardando..." : "Guardar Ruleta"}
+                 </Button>
+            </CardFooter>
         </Card>
     );
 }

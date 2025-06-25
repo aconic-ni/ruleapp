@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 interface RouletteProps {
   participants: Participant[];
   onSpinEnd: (winnerName: string) => void;
+  onCelebrationEnd: () => void;
 }
 
 const COLORS = [
@@ -60,7 +61,7 @@ const ConfettiExplosion = () => {
 };
 
 
-export default function Roulette({ participants = [], onSpinEnd }: RouletteProps) {
+export default function Roulette({ participants = [], onSpinEnd, onCelebrationEnd }: RouletteProps) {
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [winner, setWinner] = useState<string | null>(null);
@@ -100,21 +101,19 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
 
     setRotation(newRotation);
 
+    // When spin animation finishes
     setTimeout(() => {
         setIsSpinning(false);
         if (winningParticipant) {
             setWinner(winningParticipant.name);
             setShowWinnerCelebration(true);
+            onSpinEnd(winningParticipant.name); // Call onSpinEnd to save winner
         }
     }, SPIN_DURATION_SECONDS * 1000 + 200);
   };
   
-  const handleNewRaffle = () => {
-    if (winner) {
-      onSpinEnd(winner);
-    }
-    setShowWinnerCelebration(false);
-    setWinner(null);
+  const handleCelebrationEnd = () => {
+    onCelebrationEnd();
   };
 
   const wheelStyle = useMemo(() => {
@@ -137,9 +136,9 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
             <h1 className="text-5xl md:text-7xl font-bold font-headline mb-12 break-words text-center px-4 animate-pulse">
                 {winner}
             </h1>
-            <Button onClick={handleNewRaffle} size="lg" className="bg-white text-green-700 hover:bg-gray-200 text-xl font-bold px-10 py-8 rounded-full shadow-2xl">
+            <Button onClick={handleCelebrationEnd} size="lg" className="bg-white text-green-700 hover:bg-gray-200 text-xl font-bold px-10 py-8 rounded-full shadow-2xl z-10">
                 <Star className="mr-3 h-6 w-6" />
-                Empezar Nueva Ruleta
+                Cargar Otra Ruleta
             </Button>
         </div>
     )
@@ -148,8 +147,8 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
   if (participants.length === 0) {
     return (
         <div className="text-center py-12 bg-muted/50 rounded-lg">
-            <h3 className="text-xl font-headline text-muted-foreground">Esperando Participantes</h3>
-            <p className="mt-2 text-sm text-muted-foreground">Agrega participantes en la pestaña "Participantes" para activar la ruleta.</p>
+            <h3 className="text-xl font-headline text-muted-foreground">Esperando Ruleta</h3>
+            <p className="mt-2 text-sm text-muted-foreground">Ingresa el ID de una ruleta guardada para empezar a jugar.</p>
         </div>
     )
   }

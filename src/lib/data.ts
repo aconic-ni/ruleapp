@@ -1,16 +1,21 @@
-// In a real application, this file would contain functions
-// to interact with a database like Firestore.
+
 import { db } from './firebase';
-import { collection, getDocs, getDoc, doc, orderBy, limit, query } from 'firebase/firestore';
-
-// Data is now managed by component state, initial state is empty.
-const MOCK_PARTICIPANTS: Participant[] = [];
-
+import { collection, getDocs, getDoc, doc, orderBy, limit, query, where } from 'firebase/firestore';
 
 export interface Participant {
     name: string;
     ticketValue: number;
     number: number;
+}
+
+export interface Raffle {
+    id: string;
+    participants: Participant[];
+    raffleTotal: number;
+    date: string; // Creation date
+    status: 'pending' | 'completed';
+    winner?: string;
+    drawDate?: string; // Draw date
 }
 
 export interface Funds {
@@ -32,11 +37,6 @@ export interface Withdrawal {
     date: string;
 }
 
-// This function is kept for compatibility, but participant data is now client-side state
-// until a raffle is completed.
-export async function getParticipants(): Promise<Participant[]> {
-    return MOCK_PARTICIPANTS;
-}
 
 export async function getFunds(): Promise<Funds> {
     try {
@@ -54,14 +54,21 @@ export async function getFunds(): Promise<Funds> {
 export async function getRecentWinners(): Promise<Winner[]> {
     const winners: Winner[] = [];
     try {
-        const q = query(collection(db, 'ruletas'), orderBy('date', 'desc'), limit(3));
+        const q = query(
+            collection(db, 'ruletas'), 
+            where('status', '==', 'completed'), 
+            orderBy('drawDate', 'desc'), 
+            limit(3)
+        );
         const querySnapshot = await getDocs(q);
         querySnapshot.forEach((doc) => {
             const data = doc.data();
-            winners.push({
-                name: data.winner,
-                date: data.date.toDate().toISOString().split('T')[0],
-            });
+            if (data.winner && data.drawDate) {
+                winners.push({
+                    name: data.winner,
+                    date: data.drawDate.toDate().toISOString().split('T')[0],
+                });
+            }
         });
     } catch (error) {
         console.error("Error fetching recent winners: ", error);
@@ -72,20 +79,53 @@ export async function getRecentWinners(): Promise<Winner[]> {
 export async function getAllWinners(): Promise<Winner[]> {
     const winners: Winner[] = [];
      try {
-        const q = query(collection(db, 'ruletas'), orderBy('date', 'desc'));
+        const q = query(
+            collection(db, 'ruletas'), 
+            where('status', '==', 'completed'),
+            orderBy('drawDate', 'desc')
+        );
         const querySnapshot = await getDocs(q);
         querySnapshot.forEach((doc) => {
             const data = doc.data();
-            winners.push({
-                name: data.winner,
-                date: data.date.toDate().toISOString().split('T')[0],
-            });
+            if(data.winner && data.drawDate) {
+                winners.push({
+                    name: data.winner,
+                    date: data.drawDate.toDate().toISOString().split('T')[0],
+                });
+            }
         });
     } catch (error) {
         console.error("Error fetching all winners: ", error);
     }
     return winners;
 }
+
+export async function getRaffleById(id: string): Promise<Raffle | null> {
+    try {
+        const docRef = doc(db, 'ruletas', id);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            return {
+                id: docSnap.id,
+                participants: data.participants,
+                raffleTotal: data.raffleTotal,
+                status: data.status,
+                winner: data.winner,
+                date: data.date.toDate().toISOString().split('T')[0],
+                drawDate: data.drawDate ? data.drawDate.toDate().toISOString().split('T')[0] : undefined,
+            };
+        } else {
+            console.log("No such raffle document!");
+            return null;
+        }
+    } catch (error) {
+        console.error("Error fetching raffle by ID: ", error);
+        return null;
+    }
+}
+
 
 export async function getWithdrawals(): Promise<Withdrawal[]> {
     const withdrawals: Withdrawal[] = [];

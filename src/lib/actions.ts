@@ -16,10 +16,10 @@ async function ensureFundsSummaryExists() {
     return fundsRef;
 }
 
-// Action to save a completed raffle and update funds
-export async function saveRaffle(winnerName: string, participants: Participant[]) {
-    if (!winnerName || participants.length === 0) {
-        throw new Error("Winner and participants are required.");
+// Action to create a new raffle document and update funds
+export async function createRaffle(participants: Participant[]) {
+    if (participants.length === 0) {
+        throw new Error("Participants are required to create a raffle.");
     }
     
     try {
@@ -27,11 +27,11 @@ export async function saveRaffle(winnerName: string, participants: Participant[]
         const raffleTotal = participants.reduce((sum, p) => sum + p.ticketValue, 0);
 
         // 2. Add the raffle record to the 'ruletas' collection
-        await addDoc(collection(db, 'ruletas'), {
-            winner: winnerName,
+        const raffleDocRef = await addDoc(collection(db, 'ruletas'), {
             participants: participants,
-            date: Timestamp.now(),
-            raffleTotal: raffleTotal
+            raffleTotal: raffleTotal,
+            date: Timestamp.now(), // Creation date
+            status: 'pending'
         });
 
         // 3. Atomically update the total funds in the summary document
@@ -41,13 +41,41 @@ export async function saveRaffle(winnerName: string, participants: Participant[]
         });
 
         // 4. Revalidate paths to show updated data
-        revalidatePath('/');
         revalidatePath('/admin/dashboard');
         revalidatePath('/funds');
+        
+        // 5. Return the new raffle's ID
+        return raffleDocRef.id;
 
     } catch (error) {
-        console.error("Error saving raffle: ", error);
-        throw new Error("Could not save raffle to the database.");
+        console.error("Error creating raffle: ", error);
+        throw new Error("Could not create raffle in the database.");
+    }
+}
+
+// Action to set the winner for an existing raffle
+export async function setRaffleWinner(raffleId: string, winnerName: string) {
+    if (!raffleId || !winnerName) {
+        throw new Error("Raffle ID and winner name are required.");
+    }
+
+    try {
+        const raffleRef = doc(db, 'ruletas', raffleId);
+
+        // Update the document with the winner and the draw date
+        await updateDoc(raffleRef, {
+            winner: winnerName,
+            drawDate: Timestamp.now(),
+            status: 'completed'
+        });
+
+        // Revalidate paths to show updated winner history
+        revalidatePath('/');
+        revalidatePath('/admin/dashboard');
+
+    } catch (error) {
+        console.error("Error setting raffle winner: ", error);
+        throw new Error("Could not update raffle with the winner.");
     }
 }
 
@@ -83,3 +111,4 @@ export async function addWithdrawal(withdrawalRequest: Omit<Withdrawal, 'id' | '
         throw new Error("Could not add withdrawal to the database.");
     }
 }
+

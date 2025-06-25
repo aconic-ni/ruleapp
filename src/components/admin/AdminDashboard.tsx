@@ -5,34 +5,42 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, Landmark, Trophy, LogOut, Ticket } from 'lucide-react';
+import { Users, Landmark, Trophy, LogOut, Ticket, Loader2 } from 'lucide-react';
 import ParticipantManager from './ParticipantManager';
 import FundsManager from './FundsManager';
 import WinnerHistory from './WinnerHistory';
 import Roulette from '../Roulette';
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
-import type { Participant, Funds, Winner, Withdrawal } from '@/lib/data';
-import { saveRaffle, addWithdrawal } from '@/lib/actions';
+import type { Funds, Winner, Withdrawal, Raffle } from '@/lib/data';
+import { setRaffleWinner, addWithdrawal } from '@/lib/actions';
+import { getRaffleById } from '@/lib/data';
 import Footer from "../Footer";
 import { useAuth } from "@/context/AuthContext";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
+import { Input } from "../ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+
 
 interface AdminDashboardProps {
-    initialParticipants: Participant[];
     initialFunds: Funds;
     initialWinners: Winner[];
     initialWithdrawals: Withdrawal[];
 }
 
-export default function AdminDashboard({ initialParticipants, initialFunds, initialWinners, initialWithdrawals }: AdminDashboardProps) {
+export default function AdminDashboard({ initialFunds, initialWinners, initialWithdrawals }: AdminDashboardProps) {
     const router = useRouter();
     const { toast } = useToast();
     const { user, loading } = useAuth();
     
-    const [participants, setParticipants] = useState<Participant[]>(initialParticipants);
-
+    // State for Roulette Tab
+    const [raffleIdInput, setRaffleIdInput] = useState('');
+    const [loadedRaffle, setLoadedRaffle] = useState<Raffle | null>(null);
+    const [isLoadingRaffle, setIsLoadingRaffle] = useState(false);
+    const [raffleError, setRaffleError] = useState<string | null>(null);
+    
     const funds = initialFunds;
     const winners = initialWinners;
     const withdrawals = initialWithdrawals;
@@ -42,7 +50,7 @@ export default function AdminDashboard({ initialParticipants, initialFunds, init
             router.replace('/admin');
         }
     }, [user, loading, router]);
-
+    
     const handleLogout = async () => {
         try {
             await signOut(auth);
@@ -56,10 +64,6 @@ export default function AdminDashboard({ initialParticipants, initialFunds, init
         }
     };
     
-    const handleAddParticipant = (name: string, ticketValue: number, number: number) => {
-        setParticipants(prev => [...prev, { name, ticketValue, number }]);
-    };
-
     const handleAddWithdrawal = async (withdrawalRequest: Omit<Withdrawal, 'id' | 'date'>) => {
         try {
             await addWithdrawal(withdrawalRequest);
@@ -70,26 +74,56 @@ export default function AdminDashboard({ initialParticipants, initialFunds, init
         }
     };
     
-    const handleSpinEnd = async (winnerName: string) => {
+    const handleLoadRaffle = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!raffleIdInput) return;
+        
+        setIsLoadingRaffle(true);
+        setRaffleError(null);
+        setLoadedRaffle(null);
+        
         try {
-            await saveRaffle(winnerName, participants);
-            
+            const raffle = await getRaffleById(raffleIdInput);
+            if (!raffle) {
+                setRaffleError("No se encontró ninguna ruleta con ese ID.");
+            } else if (raffle.status === 'completed' || raffle.winner) {
+                setRaffleError("Esta ruleta ya fue jugada. El ganador fue " + raffle.winner + ".");
+            } else {
+                setLoadedRaffle(raffle);
+            }
+        } catch (error) {
+            setRaffleError("Ocurrió un error al cargar la ruleta.");
+            console.error(error);
+        } finally {
+            setIsLoadingRaffle(false);
+        }
+    };
+
+    const handleSetWinner = async (winnerName: string) => {
+        if (!loadedRaffle) return;
+
+        try {
+            await setRaffleWinner(loadedRaffle.id, winnerName);
             toast({
                 title: "¡Tómbola Finalizada y Guardada!",
-                description: `El ganador es ${winnerName}. Se ha iniciado una nueva tómbola.`,
+                description: `El ganador es ${winnerName}. El sorteo ha concluido.`,
             });
-            
-            setParticipants([]); 
-            router.refresh(); 
-            
+            router.refresh();
         } catch (error) {
-             toast({
+            toast({
                 title: "Error de Guardado",
-                description: "No se pudo guardar la tómbola en la base de datos.",
+                description: "No se pudo guardar el ganador de la tómbola.",
                 variant: "destructive"
             });
         }
     };
+
+    const resetRaffleState = () => {
+        setLoadedRaffle(null);
+        setRaffleIdInput('');
+        setRaffleError(null);
+        setIsLoadingRaffle(false);
+    }
 
     if (loading || !user) {
         return (
@@ -124,10 +158,43 @@ export default function AdminDashboard({ initialParticipants, initialFunds, init
                             <TabsTrigger value="history"><Trophy className="mr-2 h-4 w-4" />Historial</TabsTrigger>
                         </TabsList>
                         <TabsContent value="participants" className="mt-6">
-                            <ParticipantManager participants={participants} onAddParticipant={handleAddParticipant} />
+                            <ParticipantManager />
                         </TabsContent>
                         <TabsContent value="roulette" className="mt-6">
-                            <Roulette participants={participants} onSpinEnd={handleSpinEnd} />
+                            {!loadedRaffle ? (
+                                <Card className="max-w-md mx-auto">
+                                    <CardHeader>
+                                        <CardTitle>Jugar una Ruleta</CardTitle>
+                                        <CardDescription>Ingresa el ID de una ruleta guardada para jugarla.</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <form onSubmit={handleLoadRaffle} className="space-y-4">
+                                            <Input
+                                                placeholder="ID de la Ruleta"
+                                                value={raffleIdInput}
+                                                onChange={(e) => setRaffleIdInput(e.target.value)}
+                                                disabled={isLoadingRaffle}
+                                            />
+                                            <Button type="submit" className="w-full" disabled={isLoadingRaffle || !raffleIdInput}>
+                                                {isLoadingRaffle && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                {isLoadingRaffle ? 'Cargando...' : 'Cargar Ruleta'}
+                                            </Button>
+                                        </form>
+                                        {raffleError && (
+                                            <Alert variant="destructive" className="mt-4">
+                                                <AlertTitle>Error</AlertTitle>
+                                                <AlertDescription>{raffleError}</AlertDescription>
+                                            </Alert>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            ) : (
+                                <Roulette 
+                                    participants={loadedRaffle.participants} 
+                                    onSpinEnd={handleSetWinner}
+                                    onCelebrationEnd={resetRaffleState}
+                                />
+                            )}
                         </TabsContent>
                         <TabsContent value="funds" className="mt-6">
                             <FundsManager funds={funds} withdrawals={withdrawals} onAddWithdrawal={handleAddWithdrawal} />
