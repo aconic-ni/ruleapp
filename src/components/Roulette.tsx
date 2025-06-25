@@ -56,7 +56,7 @@ const ConfettiExplosion = () => {
         setPieces(newPieces);
     }, []);
 
-    return <div className="absolute inset-0 overflow-hidden">{pieces}</div>;
+    return <div className="absolute inset-0 pointer-events-none">{pieces}</div>;
 };
 
 
@@ -68,7 +68,7 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
   const [showWinnerCelebration, setShowWinnerCelebration] = useState(false);
 
   useEffect(() => {
-    setShuffledParticipants(participants);
+    setShuffledParticipants(shuffleArray(participants));
   }, [participants]);
   
   const numParticipants = shuffledParticipants.length;
@@ -84,28 +84,28 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
 
     setIsSpinning(true);
     setWinner(null);
+    setShowWinnerCelebration(false);
 
+    // Determine a random winner
     const winnerIndex = Math.floor(Math.random() * numParticipants);
-    
-    // Angle of the center of the winning segment, with 0 degrees at the top.
-    const winnerAngle = segmentDegrees * winnerIndex;
+    const winningParticipant = shuffledParticipants[winnerIndex];
 
-    // We need to rotate by -winnerAngle to bring it to the top.
-    const targetRotation = -winnerAngle - (segmentDegrees / 2); // Center the winning segment under the pointer
-    
-    const extraSpins = (8 + Math.floor(Math.random() * 4)) * 360;
-    
-    const newRotation = rotation - (rotation % 360) + extraSpins + targetRotation;
-    
+    // Calculate the final rotation
+    const fullSpins = 5 + Math.floor(Math.random() * 5); // 5 to 9 full spins
+    const targetAngle = (winnerIndex * segmentDegrees) + (segmentDegrees / 2);
+    const finalRotation = (fullSpins * 360) + (360 - targetAngle);
+
+    // Use current rotation to make spins cumulative and smoother
+    const newRotation = rotation - (rotation % 360) + finalRotation;
+
     setRotation(newRotation);
 
     setTimeout(() => {
-      setIsSpinning(false);
-      const winningParticipant = shuffledParticipants[winnerIndex];
-      if (winningParticipant) {
-        setWinner(winningParticipant.name);
-        setShowWinnerCelebration(true);
-      }
+        setIsSpinning(false);
+        if (winningParticipant) {
+            setWinner(winningParticipant.name);
+            setShowWinnerCelebration(true);
+        }
     }, SPIN_DURATION_SECONDS * 1000 + 200);
   };
   
@@ -131,7 +131,7 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
 
   if (showWinnerCelebration) {
     return (
-        <div className="fixed inset-0 bg-green-600 z-50 flex flex-col items-center justify-center text-white p-4">
+        <div className="fixed inset-0 bg-green-600 z-50 flex flex-col items-center justify-center text-white p-4 overflow-hidden">
             <ConfettiExplosion />
             <p className="text-2xl mb-4 font-semibold">¡Felicidades al ganador!</p>
             <h1 className="text-5xl md:text-7xl font-bold font-headline mb-12 break-words text-center px-4 animate-pulse">
@@ -175,7 +175,7 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
 
             {numParticipants > 0 && shuffledParticipants.map((participant, index) => {
               const angle = segmentDegrees * index + (segmentDegrees / 2);
-              const textRadius = 0.65; // Percentage from center to place the text (65%)
+              const textRadius = 0.8; // Percentage from center to place the text (80%)
               
               const x = 50 + textRadius * 50 * Math.cos((angle - 90) * (Math.PI / 180));
               const y = 50 + textRadius * 50 * Math.sin((angle - 90) * (Math.PI / 180));
@@ -187,13 +187,14 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
                   style={{
                     top: `${y}%`,
                     left: `${x}%`,
+                    width: segmentDegrees * 3, // Adjust width based on segment size
                     transform: `translate(-50%, -50%) rotate(${angle}deg)`
                   }}
                 >
                   <span
                     className={cn(
                         "block text-center font-headline font-bold text-white",
-                        numParticipants > 35 ? 'text-sm md:text-base' : 'text-lg md:text-xl'
+                        numParticipants > 35 ? 'text-xs md:text-sm' : 'text-base md:text-lg'
                     )}
                     style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}
                   >
