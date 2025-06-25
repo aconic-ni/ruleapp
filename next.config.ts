@@ -2,6 +2,8 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   output: 'export', // Required for GitHub Pages
+  basePath: process.env.BASE_PATH,
+  assetPrefix: process.env.BASE_PATH,
   typescript: {
     ignoreBuildErrors: true,
   },
