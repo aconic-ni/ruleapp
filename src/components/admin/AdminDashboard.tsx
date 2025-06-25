@@ -15,9 +15,12 @@ import { useToast } from "@/hooks/use-toast";
 import type { Participant, Funds, Winner, Withdrawal } from '@/lib/data';
 import { saveRaffle, addWithdrawal } from '@/lib/actions';
 import Footer from "../Footer";
+import { useAuth } from "@/context/AuthContext";
+import { auth } from "@/lib/firebase";
+import { signOut } from "firebase/auth";
 
 interface AdminDashboardProps {
-    initialParticipants: Participant[]; // This will likely be empty now
+    initialParticipants: Participant[];
     initialFunds: Funds;
     initialWinners: Winner[];
     initialWithdrawals: Withdrawal[];
@@ -26,40 +29,34 @@ interface AdminDashboardProps {
 export default function AdminDashboard({ initialParticipants, initialFunds, initialWinners, initialWithdrawals }: AdminDashboardProps) {
     const router = useRouter();
     const { toast } = useToast();
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const { user, loading } = useAuth();
     
-    // Local state for the current, un-saved raffle
     const [participants, setParticipants] = useState<Participant[]>(initialParticipants);
 
-    // These props will be updated by router.refresh()
     const funds = initialFunds;
     const winners = initialWinners;
     const withdrawals = initialWithdrawals;
 
     useEffect(() => {
-        try {
-            const isAdmin = sessionStorage.getItem('isAdminAuthenticated') === 'true';
-            if (!isAdmin) {
-                router.replace('/admin');
-            } else {
-                setIsAuthenticated(true);
-            }
-        } catch (error) {
+        if (!loading && !user) {
             router.replace('/admin');
         }
-    }, [router]);
+    }, [user, loading, router]);
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
         try {
-            sessionStorage.removeItem('isAdminAuthenticated');
+            await signOut(auth);
+            router.push('/');
         } catch (error) {
-            // Silently fail
+            toast({
+                title: "Error al cerrar sesión",
+                description: "No se pudo cerrar la sesión. Por favor, inténtalo de nuevo.",
+                variant: "destructive",
+            });
         }
-        router.push('/');
     };
     
     const handleAddParticipant = (name: string, ticketValue: number, number: number) => {
-        // This only updates local state. DB is updated on raffle completion.
         setParticipants(prev => [...prev, { name, ticketValue, number }]);
     };
 
@@ -67,7 +64,7 @@ export default function AdminDashboard({ initialParticipants, initialFunds, init
         try {
             await addWithdrawal(withdrawalRequest);
             toast({ title: "Éxito", description: "Retiro registrado y fondos actualizados." });
-            router.refresh(); // Re-fetches server-side data
+            router.refresh(); 
         } catch (error) {
             toast({ title: "Error", description: "No se pudo registrar el retiro.", variant: "destructive" });
         }
@@ -82,8 +79,8 @@ export default function AdminDashboard({ initialParticipants, initialFunds, init
                 description: `El ganador es ${winnerName}. Se ha iniciado una nueva tómbola.`,
             });
             
-            setParticipants([]); // Clear local participants for the next raffle
-            router.refresh(); // Re-fetches server-side data (funds, winners)
+            setParticipants([]); 
+            router.refresh(); 
             
         } catch (error) {
              toast({
@@ -94,7 +91,7 @@ export default function AdminDashboard({ initialParticipants, initialFunds, init
         }
     };
 
-    if (!isAuthenticated) {
+    if (loading || !user) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-background">
                 <p className="text-muted-foreground">Verificando acceso...</p>

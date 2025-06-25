@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,42 +9,52 @@ import { Label } from "@/components/ui/label";
 import { KeyRound } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import Footer from '@/components/Footer';
-
-const ADMIN_PASSWORD = "password123"; // In a real app, this would be handled securely on the server.
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { useAuth } from '@/context/AuthContext';
 
 export default function AdminLoginPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { user, loading } = useAuth();
+  
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace('/admin/dashboard');
+    }
+  }, [user, loading, router]);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulate network delay
-    setTimeout(() => {
-      if (password === ADMIN_PASSWORD) {
-        try {
-          sessionStorage.setItem('isAdminAuthenticated', 'true');
-          router.push('/admin/dashboard');
-        } catch (error) {
-            toast({
-                title: "Error de navegador",
-                description: "El almacenamiento de sesión no está disponible.",
-                variant: "destructive",
-            });
-        }
-      } else {
-        toast({
-          title: "Error de Autenticación",
-          description: "La contraseña es incorrecta.",
-          variant: "destructive",
-        });
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error: any) {
+      let description = "Ocurrió un error inesperado.";
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        description = "El correo electrónico o la contraseña son incorrectos.";
       }
+      toast({
+        title: "Error de Autenticación",
+        description: description,
+        variant: "destructive",
+      });
       setIsLoading(false);
-    }, 1000);
+    }
   };
+  
+  if (loading || user) {
+      return (
+          <div className="flex min-h-screen items-center justify-center bg-background">
+              <p className="text-muted-foreground">Cargando...</p>
+          </div>
+      );
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -56,10 +66,21 @@ export default function AdminLoginPage() {
                 <KeyRound className="h-8 w-8" />
               </div>
               <CardTitle className="font-headline text-2xl">Acceso de Administrador</CardTitle>
-              <CardDescription>Ingresa la contraseña para gestionar la tómbola.</CardDescription>
+              <CardDescription>Ingresa tus credenciales para gestionar la tómbola.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Correo Electrónico</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    placeholder="admin@example.com"
+                  />
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Contraseña</Label>
                   <Input

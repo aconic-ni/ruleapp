@@ -2,6 +2,7 @@
 import { initializeApp, getApp, getApps } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAnalytics } from "firebase/analytics";
+import { getAuth } from "firebase/auth";
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -20,8 +21,9 @@ const firebaseConfig = {
 // This pattern prevents re-initializing the app on hot-reloads.
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
+const auth = getAuth(app);
 
 // Initialize Analytics if running in the browser
 const analytics = typeof window !== 'undefined' ? getAnalytics(app) : null;
 
-export { app, db, analytics };
+export { app, db, auth, analytics };
