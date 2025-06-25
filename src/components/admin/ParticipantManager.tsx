@@ -10,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from "@/hooks/use-toast";
 import type { Participant } from '@/lib/data';
 import { createRaffle } from '@/lib/actions';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Trash2 } from 'lucide-react';
 
 interface ParticipantManagerProps {
     onRaffleSaved: () => void;
@@ -46,11 +46,15 @@ export default function ParticipantManager({ onRaffleSaved }: ParticipantManager
         }
 
         const newParticipant: Participant = { name: newName.trim(), ticketValue, number: num };
-        setParticipants(prev => [...prev, newParticipant]);
+        setParticipants(prev => [...prev, newParticipant].sort((a, b) => a.number - b.number));
         
         setNewName('');
         setTicketValue(25);
         setParticipantNumber('');
+    };
+
+    const handleRemoveParticipant = (numberToRemove: number) => {
+        setParticipants(prev => prev.filter(p => p.number !== numberToRemove));
     };
 
     const handleSaveRaffle = async () => {
@@ -128,11 +132,21 @@ export default function ParticipantManager({ onRaffleSaved }: ParticipantManager
                         {participants.length > 0 ? (
                             <ul className="space-y-1">
                             {participants.map((p, i) => (
-                                <li key={i} className="text-sm p-1 rounded-md transition-colors hover:bg-background flex justify-between items-center">
+                                <li key={p.number} className="text-sm p-1 rounded-md transition-colors hover:bg-background flex justify-between items-center">
                                     <span>{i+1}. {p.name}</span>
                                     <div className="flex items-center gap-2">
                                         <span className="font-bold text-primary text-base">#{p.number}</span>
                                         <span className="font-mono text-muted-foreground">${p.ticketValue}</span>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                            onClick={() => handleRemoveParticipant(p.number)}
+                                            disabled={isSaving}
+                                            aria-label="Eliminar participante"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
                                     </div>
                                 </li>
                             ))}
