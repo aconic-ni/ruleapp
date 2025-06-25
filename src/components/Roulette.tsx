@@ -4,15 +4,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Star, Shuffle } from 'lucide-react';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import type { Participant } from '@/lib/data';
 import { cn } from '@/lib/utils';
 
@@ -43,13 +34,38 @@ const shuffleArray = (array: Participant[]) => {
   return newArray;
 };
 
+const ConfettiPiece = ({ style }: { style: React.CSSProperties }) => (
+  <div className="absolute w-2 h-4" style={style} />
+);
+
+const ConfettiExplosion = () => {
+    const [pieces, setPieces] = useState<React.ReactNode[]>([]);
+
+    useEffect(() => {
+        const confettiColors = ["#FFCA28", "#FF7043", "#66BB6A", "#42A5F5", "#EC407A", "#FFFFFF"];
+        const newPieces = Array.from({ length: 150 }).map((_, i) => {
+            const style: React.CSSProperties = {
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * -20}%`,
+                backgroundColor: confettiColors[i % confettiColors.length],
+                transform: `rotate(${Math.random() * 360}deg)`,
+                animation: `confetti-fall ${2 + Math.random() * 2}s ${Math.random() * 1}s linear forwards`,
+            };
+            return <ConfettiPiece key={i} style={style} />;
+        });
+        setPieces(newPieces);
+    }, []);
+
+    return <div className="absolute inset-0 overflow-hidden">{pieces}</div>;
+};
+
 
 export default function Roulette({ participants = [], onSpinEnd }: RouletteProps) {
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [winner, setWinner] = useState<string | null>(null);
-  const [showWinnerDialog, setShowWinnerDialog] = useState(false);
   const [shuffledParticipants, setShuffledParticipants] = useState<Participant[]>([]);
+  const [showWinnerCelebration, setShowWinnerCelebration] = useState(false);
 
   useEffect(() => {
     setShuffledParticipants(participants);
@@ -70,47 +86,64 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
     setWinner(null);
 
     const winnerIndex = Math.floor(Math.random() * numParticipants);
-    const winnerData = shuffledParticipants[winnerIndex];
     
     // Angle of the center of the winning segment, with 0 degrees at the top.
     const winnerAngle = segmentDegrees * winnerIndex;
 
     // We need to rotate by -winnerAngle to bring it to the top.
-    const targetRotation = -winnerAngle;
+    const targetRotation = -winnerAngle - (segmentDegrees / 2); // Center the winning segment under the pointer
     
     const extraSpins = (8 + Math.floor(Math.random() * 4)) * 360;
     
-    // The new absolute rotation
-    // We subtract the current remainder to start from a clean slate, then add spins and the target.
     const newRotation = rotation - (rotation % 360) + extraSpins + targetRotation;
     
     setRotation(newRotation);
 
     setTimeout(() => {
       setIsSpinning(false);
-      const winningParticipant = shuffledParticipants.find(p => p.number === winnerData.number);
+      const winningParticipant = shuffledParticipants[winnerIndex];
       if (winningParticipant) {
         setWinner(winningParticipant.name);
-        setShowWinnerDialog(true);
-        onSpinEnd(winningParticipant.name);
+        setShowWinnerCelebration(true);
       }
     }, SPIN_DURATION_SECONDS * 1000 + 200);
+  };
+  
+  const handleNewRaffle = () => {
+    if (winner) {
+      onSpinEnd(winner);
+    }
+    setShowWinnerCelebration(false);
+    setWinner(null);
   };
 
   const wheelStyle = useMemo(() => {
     if (numParticipants === 0) {
       return { background: 'hsl(var(--muted))' };
     }
-    // Start the gradient so the dividing line is at the top (our 0-degree point)
-    const gradientStartAngle = -segmentDegrees / 2;
     const gradientParts = shuffledParticipants.map((p, i) => {
       const start = i * segmentDegrees;
       const end = (i + 1) * segmentDegrees;
       return `${COLORS[i % COLORS.length]} ${start}deg ${end}deg`;
     });
-    return { background: `conic-gradient(from ${gradientStartAngle}deg, ${gradientParts.join(', ')})` };
+    return { background: `conic-gradient(${gradientParts.join(', ')})` };
   }, [shuffledParticipants, segmentDegrees, numParticipants]);
 
+  if (showWinnerCelebration) {
+    return (
+        <div className="fixed inset-0 bg-green-600 z-50 flex flex-col items-center justify-center text-white p-4">
+            <ConfettiExplosion />
+            <p className="text-2xl mb-4 font-semibold">¡Felicidades al ganador!</p>
+            <h1 className="text-5xl md:text-7xl font-bold font-headline mb-12 break-words text-center px-4 animate-pulse">
+                {winner}
+            </h1>
+            <Button onClick={handleNewRaffle} size="lg" className="bg-white text-green-700 hover:bg-gray-200 text-xl font-bold px-10 py-8 rounded-full shadow-2xl">
+                <Star className="mr-3 h-6 w-6" />
+                Empezar Nueva Ruleta
+            </Button>
+        </div>
+    )
+  }
 
   if (participants.length === 0) {
     return (
@@ -123,20 +156,6 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
 
   return (
     <div className="flex flex-col items-center gap-8">
-      <AlertDialog open={showWinnerDialog} onOpenChange={setShowWinnerDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-center text-3xl font-headline text-accent">¡Felicidades!</AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-5xl font-bold text-primary py-6 break-words">
-              {winner}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setShowWinnerDialog(false)} className="w-full">Cerrar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       <div className="relative w-80 h-80 md:w-[500px] md:h-[500px] flex items-center justify-center">
         <div 
           className="absolute top-[-5px] left-1/2 -translate-x-1/2 w-8 h-10 z-20"
@@ -155,13 +174,11 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
             <div className="absolute inset-0 rounded-full" style={wheelStyle} />
 
             {numParticipants > 0 && shuffledParticipants.map((participant, index) => {
-              // The center of the segment, with 0 degrees at the top
-              const angle = segmentDegrees * index;
-              const textRadius = 42.5; // Percentage from center to place the text
-              // Convert our "top=0" angle to the "right=0" angle for Math.cos/sin
-              const angleRad = (angle - 90) * (Math.PI / 180);
-              const x = 50 + textRadius * Math.cos(angleRad);
-              const y = 50 + textRadius * Math.sin(angleRad);
+              const angle = segmentDegrees * index + (segmentDegrees / 2);
+              const textRadius = 0.65; // Percentage from center to place the text (65%)
+              
+              const x = 50 + textRadius * 50 * Math.cos((angle - 90) * (Math.PI / 180));
+              const y = 50 + textRadius * 50 * Math.sin((angle - 90) * (Math.PI / 180));
               
               return (
                 <div
@@ -174,7 +191,10 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
                   }}
                 >
                   <span
-                    className="block text-center font-headline font-bold text-lg md:text-xl text-white"
+                    className={cn(
+                        "block text-center font-headline font-bold text-white",
+                        numParticipants > 35 ? 'text-sm md:text-base' : 'text-lg md:text-xl'
+                    )}
                     style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}
                   >
                     {participant.number}
@@ -182,8 +202,7 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
                 </div>
               )
             })}
-
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-white rounded-full z-10 shadow-inner" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 md:w-16 md:h-16 bg-white border-4 border-gray-300 rounded-full z-10 shadow-inner" />
         </div>
       </div>
       
