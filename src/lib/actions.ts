@@ -1,50 +1,38 @@
-
-'use server';
-
-import { db } from './firebase-admin';
-import { FieldValue, Timestamp } from 'firebase-admin/firestore';
-import { revalidatePath } from 'next/cache';
+import { db } from './firebase';
+import { collection, doc, addDoc, updateDoc, getDoc, runTransaction, Timestamp } from 'firebase/firestore';
 import type { Participant, Withdrawal, Raffle } from './data';
 
-// Ensure the funds summary document exists
-async function ensureFundsSummaryExists() {
-    const fundsRef = db.collection('funds').doc('summary');
-    const fundsSnap = await fundsRef.get();
-    if (!fundsSnap.exists) {
-        await fundsRef.set({ total: 0, withdrawn: 0 });
-    }
-    return fundsRef;
-}
-
-// Action to create a new raffle document and update funds
-export async function createRaffle(participants: Participant[]) {
+export async function createRaffle(participants: Participant[]): Promise<string> {
     if (participants.length === 0) {
         throw new Error("Participants are required to create a raffle.");
     }
     
     try {
-        // 1. Calculate the total value from this raffle's tickets
         const raffleTotal = participants.reduce((sum, p) => sum + p.ticketValue, 0);
-
-        // 2. Add the raffle record to the 'ruletas' collection
-        const raffleDocRef = await db.collection('ruletas').add({
-            participants: participants,
-            raffleTotal: raffleTotal,
-            date: Timestamp.now(), // Creation date
-            status: 'pending'
-        });
-
-        // 3. Atomically update the total funds in the summary document
-        const fundsRef = await ensureFundsSummaryExists();
-        await fundsRef.update({
-            total: FieldValue.increment(raffleTotal)
-        });
-
-        // 4. Revalidate paths to show updated data
-        revalidatePath('/admin/dashboard');
-        revalidatePath('/funds');
         
-        // 5. Return the new raffle's ID
+        // Use a transaction to ensure atomic update of funds and raffle creation
+        const fundsRef = doc(db, 'funds', 'summary');
+
+        const raffleDocRef = await runTransaction(db, async (transaction) => {
+            const fundsSnap = await transaction.get(fundsRef);
+            if (!fundsSnap.exists()) {
+                // Initialize funds doc if it doesn't exist
+                transaction.set(fundsRef, { total: raffleTotal, withdrawn: 0 });
+            } else {
+                const currentTotal = fundsSnap.data().total || 0;
+                transaction.update(fundsRef, { total: currentTotal + raffleTotal });
+            }
+
+            const newRaffleRef = doc(collection(db, 'ruletas'));
+            transaction.set(newRaffleRef, {
+                participants,
+                raffleTotal,
+                date: Timestamp.now(),
+                status: 'pending',
+            });
+            return newRaffleRef;
+        });
+        
         return raffleDocRef.id;
 
     } catch (error) {
@@ -53,59 +41,47 @@ export async function createRaffle(participants: Participant[]) {
     }
 }
 
-// Action to set the winner for an existing raffle
-export async function setRaffleWinner(raffleId: string, winnerName: string) {
+export async function setRaffleWinner(raffleId: string, winnerName: string): Promise<void> {
     if (!raffleId || !winnerName) {
         throw new Error("Raffle ID and winner name are required.");
     }
 
     try {
-        const raffleRef = db.collection('ruletas').doc(raffleId);
-
-        // Update the document with the winner and the draw date
-        await raffleRef.update({
+        const raffleRef = doc(db, 'ruletas', raffleId);
+        await updateDoc(raffleRef, {
             winner: winnerName,
             drawDate: Timestamp.now(),
             status: 'completed'
         });
-
-        // Revalidate paths to show updated winner history
-        revalidatePath('/');
-        revalidatePath('/admin/dashboard');
-
     } catch (error) {
         console.error("Error setting raffle winner: ", error);
         throw new Error("Could not update raffle with the winner.");
     }
 }
 
-
-// Action to add a withdrawal and update funds
-export async function addWithdrawal(withdrawalRequest: Omit<Withdrawal, 'id' | 'date'>) {
+export async function addWithdrawal(withdrawalRequest: Omit<Withdrawal, 'id' | 'date'>): Promise<void> {
     if (!withdrawalRequest.name || withdrawalRequest.amount <= 0) {
         throw new Error("Invalid withdrawal data.");
     }
 
     try {
-        const withdrawalData = {
-            ...withdrawalRequest,
-            date: Timestamp.now(),
-        };
+        const fundsRef = doc(db, 'funds', 'summary');
+        
+        await runTransaction(db, async (transaction) => {
+            const fundsSnap = await transaction.get(fundsRef);
+            if (!fundsSnap.exists()) {
+                throw new Error("Funds summary document does not exist!");
+            }
+            const currentWithdrawn = fundsSnap.data()?.withdrawn || 0;
+            transaction.update(fundsRef, { withdrawn: currentWithdrawn + withdrawalRequest.amount });
 
-        // 1. Add the withdrawal record to the 'retiros' collection
-        await db.collection('retiros').add(withdrawalData);
-
-        // 2. Atomically update the withdrawn amount in the summary document
-        const fundsRef = await ensureFundsSummaryExists();
-        await fundsRef.update({
-            withdrawn: FieldValue.increment(withdrawalRequest.amount)
+            const newWithdrawalRef = doc(collection(db, 'retiros'));
+            transaction.set(newWithdrawalRef, {
+                ...withdrawalRequest,
+                date: Timestamp.now(),
+            });
         });
 
-        // 3. Revalidate paths to show updated data
-        revalidatePath('/admin/dashboard');
-        revalidatePath('/funds');
-        revalidatePath('/withdrawals');
-        
     } catch (error) {
         console.error("Error adding withdrawal: ", error);
         throw new Error("Could not add withdrawal to the database.");
@@ -114,10 +90,10 @@ export async function addWithdrawal(withdrawalRequest: Omit<Withdrawal, 'id' | '
 
 export async function getRaffleById(id: string): Promise<Raffle | null> {
     try {
-        const docRef = db.collection('ruletas').doc(id);
-        const docSnap = await docRef.get();
+        const docRef = doc(db, 'ruletas', id);
+        const docSnap = await getDoc(docRef);
 
-        if (docSnap.exists) {
+        if (docSnap.exists()) {
             const data = docSnap.data();
             if (!data) return null;
             return {
@@ -130,7 +106,6 @@ export async function getRaffleById(id: string): Promise<Raffle | null> {
                 drawDate: data.drawDate ? data.drawDate.toDate().toISOString().split('T')[0] : undefined,
             };
         } else {
-            console.log("No such raffle document!");
             return null;
         }
     } catch (error) {
@@ -141,10 +116,10 @@ export async function getRaffleById(id: string): Promise<Raffle | null> {
 
 export async function getWithdrawalById(id: string): Promise<Withdrawal | null> {
     try {
-        const docRef = db.collection('retiros').doc(id);
-        const docSnap = await docRef.get();
+        const docRef = doc(db, 'retiros', id);
+        const docSnap = await getDoc(docRef);
 
-        if (docSnap.exists) {
+        if (docSnap.exists()) {
             const data = docSnap.data();
             if (!data) return null;
             return {
@@ -156,7 +131,6 @@ export async function getWithdrawalById(id: string): Promise<Withdrawal | null> 
                 date: data.date.toDate().toISOString().split('T')[0],
             };
         } else {
-            console.log("No such document!");
             return null;
         }
     } catch (error) {

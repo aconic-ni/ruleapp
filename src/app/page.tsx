@@ -1,12 +1,37 @@
+"use client"; // Convert to client component
+
+import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getFunds, getRecentWinners } from '@/lib/data';
-import { Ticket, DollarSign, Trophy } from 'lucide-react';
+import { getFunds, getRecentWinners, Funds, Winner } from '@/lib/data';
+import { Ticket, DollarSign, Trophy, Loader2 } from 'lucide-react';
 import Footer from '@/components/Footer';
 
-export default async function Home() {
-  const funds = await getFunds();
-  const winners = await getRecentWinners();
+export default function Home() {
+  const [funds, setFunds] = useState<Funds | null>(null);
+  const [winners, setWinners] = useState<Winner[] | null>(null);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [fundsData, winnersData] = await Promise.all([
+          getFunds(),
+          getRecentWinners()
+        ]);
+        setFunds(fundsData);
+        setWinners(winnersData);
+      } catch (error) {
+        console.error("Failed to fetch data for home page", error);
+      }
+    }
+    fetchData();
+  }, []);
+
+  const renderLoading = () => (
+    <div className="flex justify-center items-center h-24">
+      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+    </div>
+  );
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -24,18 +49,22 @@ export default async function Home() {
               <CardTitle className="font-headline flex items-center gap-2"><DollarSign/> Estado de Fondos</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex justify-between items-center border-b pb-2">
-                <span className="text-muted-foreground">Total Recaudado</span>
-                <span className="font-bold text-lg">${funds.total.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between items-center border-b pb-2">
-                <span className="text-muted-foreground">Total Retirado</span>
-                <span className="font-bold text-lg text-destructive">${funds.withdrawn.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between items-center pt-2">
-                <span className="font-semibold text-primary">Saldo Actual</span>
-                <span className="font-bold text-2xl text-primary">${(funds.total - funds.withdrawn).toLocaleString()}</span>
-              </div>
+              {funds === null ? renderLoading() : (
+                <>
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span className="text-muted-foreground">Total Recaudado</span>
+                    <span className="font-bold text-lg">${funds.total.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center border-b pb-2">
+                    <span className="text-muted-foreground">Total Retirado</span>
+                    <span className="font-bold text-lg text-destructive">${funds.withdrawn.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2">
+                    <span className="font-semibold text-primary">Saldo Actual</span>
+                    <span className="font-bold text-2xl text-primary">${(funds.total - funds.withdrawn).toLocaleString()}</span>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
           
@@ -44,19 +73,21 @@ export default async function Home() {
               <CardTitle className="font-headline flex items-center gap-2"><Trophy /> Ganadores Recientes</CardTitle>
             </CardHeader>
             <CardContent>
-              {winners.length > 0 ? (
-                <ul className="space-y-3">
-                  {winners.map((winner, index) => (
-                    <li key={index} className="flex justify-between items-center border-b pb-2 last:border-b-0">
-                      <span className="font-semibold text-accent">{winner.name}</span>
-                      <span className="text-xs text-muted-foreground">{winner.date}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>Aún no hay ganadores. ¡La próxima tómbola está por comenzar!</p>
-                </div>
+              {winners === null ? renderLoading() : (
+                 winners.length > 0 ? (
+                  <ul className="space-y-3">
+                    {winners.map((winner, index) => (
+                      <li key={index} className="flex justify-between items-center border-b pb-2 last:border-b-0">
+                        <span className="font-semibold text-accent">{winner.name}</span>
+                        <span className="text-xs text-muted-foreground">{winner.date}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>Aún no hay ganadores. ¡La próxima tómbola está por comenzar!</p>
+                  </div>
+                )
               )}
             </CardContent>
           </Card>

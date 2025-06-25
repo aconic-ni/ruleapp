@@ -3,20 +3,36 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Default security rules:
-    // - Public read access is allowed for all collections. This is necessary for
-    //   the public pages of your app to display data.
-    // - All direct writes from clients are denied. This is a critical security
-    //   measure.
-    //
-    // All write operations (creating raffles, adding withdrawals) are handled
-    // by Next.js Server Actions, which use the Firebase Admin SDK. The Admin SDK
-    // runs with elevated privileges on the server and bypasses these client-side
-    // security rules. This is a secure and standard pattern.
+    // Helper function to check for admin role
+    function isAdmin() {
+      // Check if the user is authenticated and has an admin role document
+      // The user's UID must match the document ID in the 'users' collection
+      return request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
 
-    match /{document=**} {
+    // Ruletas: Public read, admin write
+    match /ruletas/{raffleId} {
       allow read: if true;
-      allow write: if false;
+      allow write: if isAdmin();
+    }
+
+    // Retiros: Public read, admin create
+    match /retiros/{withdrawalId} {
+      allow read: if true;
+      allow create: if isAdmin();
+      allow update, delete: if false; // Disallow updates/deletes from client
+    }
+
+    // Funds: Public read, admin write
+    match /funds/summary {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // Users: only readable by other admins to check roles if needed, not writable from client
+    match /users/{userId} {
+      allow read: if isAdmin();
+      allow write: if false; // Manage roles from Firebase Console or a secure backend
     }
   }
 }

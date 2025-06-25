@@ -1,12 +1,29 @@
+"use client";
+
+import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { getFunds } from '@/lib/data';
-import { DollarSign } from 'lucide-react';
+import { getFunds, Funds } from '@/lib/data';
+import { DollarSign, Loader2 } from 'lucide-react';
 import PrintButton from '@/components/PrintButton';
 import Footer from '@/components/Footer';
 
-export default async function FundsPage() {
-  const funds = await getFunds();
+export default function FundsPage() {
+  const [funds, setFunds] = useState<Funds | null>(null);
+
+  useEffect(() => {
+    getFunds().then(setFunds);
+  }, []);
+
+  if (!funds) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <p className="ml-4 text-muted-foreground">Cargando fondos...</p>
+      </div>
+    );
+  }
+
   const balance = funds.total - funds.withdrawn;
 
   return (

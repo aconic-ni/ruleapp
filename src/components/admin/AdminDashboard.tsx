@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -27,29 +27,27 @@ interface AdminDashboardProps {
     initialFunds: Funds;
     initialWinners: Winner[];
     initialWithdrawals: Withdrawal[];
+    onDataChange: () => void;
 }
 
-export default function AdminDashboard({ initialFunds, initialWinners, initialWithdrawals }: AdminDashboardProps) {
+export default function AdminDashboard({ initialFunds, initialWinners, initialWithdrawals, onDataChange }: AdminDashboardProps) {
     const router = useRouter();
     const { toast } = useToast();
     const { user, loading } = useAuth();
     
-    // State for Roulette Tab
     const [raffleIdInput, setRaffleIdInput] = useState('');
     const [loadedRaffle, setLoadedRaffle] = useState<Raffle | null>(null);
     const [isLoadingRaffle, setIsLoadingRaffle] = useState(false);
     const [raffleError, setRaffleError] = useState<string | null>(null);
     
-    const funds = initialFunds;
-    const winners = initialWinners;
-    const withdrawals = initialWithdrawals;
+    if (loading || !user) {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-background">
+                <p className="text-muted-foreground">Verificando acceso...</p>
+            </div>
+        );
+    }
 
-    useEffect(() => {
-        if (!loading && !user) {
-            router.replace('/admin');
-        }
-    }, [user, loading, router]);
-    
     const handleLogout = async () => {
         try {
             await signOut(auth);
@@ -67,9 +65,10 @@ export default function AdminDashboard({ initialFunds, initialWinners, initialWi
         try {
             await addWithdrawal(withdrawalRequest);
             toast({ title: "Éxito", description: "Retiro registrado y fondos actualizados." });
-            router.refresh(); 
+            onDataChange();
         } catch (error) {
-            toast({ title: "Error", description: "No se pudo registrar el retiro.", variant: "destructive" });
+            const errorMessage = (error instanceof Error) ? error.message : "No se pudo registrar el retiro.";
+            toast({ title: "Error", description: errorMessage, variant: "destructive" });
         }
     };
     
@@ -107,7 +106,7 @@ export default function AdminDashboard({ initialFunds, initialWinners, initialWi
                 title: "¡Tómbola Finalizada y Guardada!",
                 description: `El ganador es ${winnerName}. El sorteo ha concluido.`,
             });
-            router.refresh();
+            onDataChange();
         } catch (error) {
             toast({
                 title: "Error de Guardado",
@@ -122,14 +121,6 @@ export default function AdminDashboard({ initialFunds, initialWinners, initialWi
         setRaffleIdInput('');
         setRaffleError(null);
         setIsLoadingRaffle(false);
-    }
-
-    if (loading || !user) {
-        return (
-            <div className="flex min-h-screen items-center justify-center bg-background">
-                <p className="text-muted-foreground">Verificando acceso...</p>
-            </div>
-        );
     }
 
     return (
@@ -157,7 +148,7 @@ export default function AdminDashboard({ initialFunds, initialWinners, initialWi
                             <TabsTrigger value="history"><Trophy className="mr-2 h-4 w-4" />Historial</TabsTrigger>
                         </TabsList>
                         <TabsContent value="participants" className="mt-6">
-                            <ParticipantManager />
+                            <ParticipantManager onRaffleSaved={onDataChange} />
                         </TabsContent>
                         <TabsContent value="roulette" className="mt-6">
                             {!loadedRaffle ? (
@@ -196,10 +187,10 @@ export default function AdminDashboard({ initialFunds, initialWinners, initialWi
                             )}
                         </TabsContent>
                         <TabsContent value="funds" className="mt-6">
-                            <FundsManager funds={funds} withdrawals={withdrawals} onAddWithdrawal={handleAddWithdrawal} />
+                            <FundsManager funds={initialFunds} withdrawals={initialWithdrawals} onAddWithdrawal={handleAddWithdrawal} />
                         </TabsContent>
                         <TabsContent value="history" className="mt-6">
-                            <WinnerHistory winners={winners} />
+                            <WinnerHistory winners={initialWinners} />
                         </TabsContent>
                     </Tabs>
                 </main>

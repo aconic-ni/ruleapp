@@ -1,13 +1,20 @@
+"use client";
+
+import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getWithdrawals } from '@/lib/data';
-import { History } from 'lucide-react';
+import { getWithdrawals, Withdrawal } from '@/lib/data';
+import { History, Loader2 } from 'lucide-react';
 import PrintButton from '@/components/PrintButton';
 import Footer from '@/components/Footer';
 
-export default async function WithdrawalsPage() {
-    const withdrawals = await getWithdrawals();
+export default function WithdrawalsPage() {
+    const [withdrawals, setWithdrawals] = useState<Withdrawal[] | null>(null);
+
+    useEffect(() => {
+        getWithdrawals().then(setWithdrawals);
+    }, []);
 
     return (
         <div className="flex flex-col min-h-screen bg-background">
@@ -35,7 +42,13 @@ export default async function WithdrawalsPage() {
                                   </TableRow>
                               </TableHeader>
                               <TableBody>
-                                  {withdrawals.length > 0 ? withdrawals.map((w) => (
+                                  {withdrawals === null ? (
+                                    <TableRow>
+                                      <TableCell colSpan={6} className="h-24 text-center">
+                                        <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
+                                      </TableCell>
+                                    </TableRow>
+                                  ) : withdrawals.length > 0 ? withdrawals.map((w) => (
                                       <TableRow key={w.id}>
                                           <TableCell className="font-mono text-xs">{w.id}</TableCell>
                                           <TableCell className="font-mono text-xs">{w.solicitudId}</TableCell>

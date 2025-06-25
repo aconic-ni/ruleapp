@@ -1,6 +1,7 @@
+import { db } from './firebase';
+import { collection, getDocs, getDoc, doc, query, where, orderBy, limit, Timestamp } from 'firebase/firestore';
 
-import { db } from './firebase-admin';
-
+// Define types
 export interface Participant {
     name: string;
     ticketValue: number;
@@ -36,11 +37,19 @@ export interface Withdrawal {
     date: string;
 }
 
+function formatDate(timestamp: Timestamp): string {
+    if (!timestamp || typeof timestamp.toDate !== 'function') {
+        // Fallback for unexpected data, though Firestore timestamps should always have toDate
+        return new Date().toISOString().split('T')[0];
+    }
+    return timestamp.toDate().toISOString().split('T')[0];
+}
 
 export async function getFunds(): Promise<Funds> {
     try {
-        const fundsDoc = await db.collection('funds').doc('summary').get();
-        if (fundsDoc.exists) {
+        const fundsDocRef = doc(db, 'funds', 'summary');
+        const fundsDoc = await getDoc(fundsDocRef);
+        if (fundsDoc.exists()) {
             return fundsDoc.data() as Funds;
         }
     } catch (error) {
@@ -53,18 +62,20 @@ export async function getFunds(): Promise<Funds> {
 export async function getRecentWinners(): Promise<Winner[]> {
     const winners: Winner[] = [];
     try {
-        const querySnapshot = await db.collection('ruletas')
-            .where('status', '==', 'completed')
-            .orderBy('drawDate', 'desc')
-            .limit(3)
-            .get();
+        const q = query(
+            collection(db, 'ruletas'),
+            where('status', '==', 'completed'),
+            orderBy('drawDate', 'desc'),
+            limit(3)
+        );
+        const querySnapshot = await getDocs(q);
 
         querySnapshot.forEach((doc) => {
             const data = doc.data();
             if (data.winner && data.drawDate) {
                 winners.push({
                     name: data.winner,
-                    date: data.drawDate.toDate().toISOString().split('T')[0],
+                    date: formatDate(data.drawDate),
                 });
             }
         });
@@ -77,17 +88,19 @@ export async function getRecentWinners(): Promise<Winner[]> {
 export async function getAllWinners(): Promise<Winner[]> {
     const winners: Winner[] = [];
      try {
-        const querySnapshot = await db.collection('ruletas')
-            .where('status', '==', 'completed')
-            .orderBy('drawDate', 'desc')
-            .get();
+        const q = query(
+            collection(db, 'ruletas'),
+            where('status', '==', 'completed'),
+            orderBy('drawDate', 'desc')
+        );
+        const querySnapshot = await getDocs(q);
             
         querySnapshot.forEach((doc) => {
             const data = doc.data();
             if(data.winner && data.drawDate) {
                 winners.push({
                     name: data.winner,
-                    date: data.drawDate.toDate().toISOString().split('T')[0],
+                    date: formatDate(data.drawDate),
                 });
             }
         });
@@ -100,7 +113,8 @@ export async function getAllWinners(): Promise<Winner[]> {
 export async function getWithdrawals(): Promise<Withdrawal[]> {
     const withdrawals: Withdrawal[] = [];
     try {
-        const querySnapshot = await db.collection('retiros').orderBy('date', 'desc').get();
+        const q = query(collection(db, 'retiros'), orderBy('date', 'desc'));
+        const querySnapshot = await getDocs(q);
         querySnapshot.forEach((doc) => {
             const data = doc.data();
             withdrawals.push({
@@ -109,7 +123,7 @@ export async function getWithdrawals(): Promise<Withdrawal[]> {
                 name: data.name,
                 amount: data.amount,
                 declaration: data.declaration,
-                date: data.date.toDate().toISOString().split('T')[0],
+                date: formatDate(data.date),
             });
         });
     } catch (error) {

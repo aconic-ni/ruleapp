@@ -12,7 +12,11 @@ import type { Participant } from '@/lib/data';
 import { createRaffle } from '@/lib/actions';
 import { Loader2 } from 'lucide-react';
 
-export default function ParticipantManager() {
+interface ParticipantManagerProps {
+    onRaffleSaved: () => void;
+}
+
+export default function ParticipantManager({ onRaffleSaved }: ParticipantManagerProps) {
     const [participants, setParticipants] = useState<Participant[]>([]);
     const [newName, setNewName] = useState('');
     const [ticketValue, setTicketValue] = useState(25);
@@ -63,8 +67,10 @@ export default function ParticipantManager() {
                 duration: 8000
             });
             setParticipants([]); // Clear participants for the next raffle
+            onRaffleSaved();
         } catch (error) {
-            toast({ title: "Error al Guardar", description: "No se pudo guardar la ruleta.", variant: "destructive" });
+            const errorMessage = (error instanceof Error) ? error.message : "No se pudo guardar la ruleta.";
+            toast({ title: "Error al Guardar", description: errorMessage, variant: "destructive" });
         } finally {
             setIsSaving(false);
         }
