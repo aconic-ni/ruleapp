@@ -20,8 +20,30 @@ interface RouletteProps {
   onSpinEnd: (winnerName: string) => void;
 }
 
-const COLORS = ["#3B82F6", "#0EA5E9", "#FFC107", "#FF5722", "#4CAF50", "#2196F3", "#E91E63", "#00BCD4"];
-const SPIN_DURATION_MS = 8000;
+// Expanded color palette to avoid adjacent repeats for up to 50 participants
+const COLORS = [
+  "#42A5F5", "#FF7043", "#66BB6A", "#FFCA28", "#26C6DA", "#EC407A", "#9CCC65", "#7E57C2",
+  "#29B6F6", "#FFA726", "#8D6E63", "#EF5350", "#AB47BC", "#5C6BC0", "#26A69A", "#FFEE58",
+  "#FF8A65", "#42A5F5", "#D4E157", "#BDBDBD", "#78909C", "#FF7043", "#A1887F", "#90A4AE",
+  "#66BB6A", "#FFCA28", "#26C6DA", "#EC407A", "#9CCC65", "#7E57C2", "#29B6F6", "#FFA726",
+  "#8D6E63", "#EF5350", "#AB47BC", "#5C6BC0", "#26A69A", "#FFEE58", "#FF8A65", "#D4E157",
+  "#BDBDBD", "#78909C", "#A1887F", "#90A4AE", "#607D8B", "#FFC107", "#03A9F4", "#CDDC39"
+];
+const SPIN_DURATION_SECONDS = 8;
+
+// Fisher-Yates shuffle algorithm for a good shuffle
+const shuffleArray = (array: Participant[]) => {
+  let currentIndex = array.length, randomIndex;
+  const newArray = [...array];
+  while (currentIndex !== 0) {
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+    [newArray[currentIndex], newArray[randomIndex]] = [
+      newArray[randomIndex], newArray[currentIndex]];
+  }
+  return newArray;
+};
+
 
 export default function Roulette({ participants = [], onSpinEnd }: RouletteProps) {
   const [isSpinning, setIsSpinning] = useState(false);
@@ -31,12 +53,7 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
   const [shuffledParticipants, setShuffledParticipants] = useState<Participant[]>([]);
 
   useEffect(() => {
-    // Initial shuffle when participants change
-    if (participants.length > 0) {
-        setShuffledParticipants([...participants].sort(() => Math.random() - 0.5));
-    } else {
-        setShuffledParticipants([]);
-    }
+    setShuffledParticipants(participants);
   }, [participants]);
   
   const numParticipants = shuffledParticipants.length;
@@ -44,41 +61,36 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
 
   const handleShuffle = () => {
     if(isSpinning) return;
-    setShuffledParticipants([...shuffledParticipants].sort(() => Math.random() - 0.5));
+    setShuffledParticipants(shuffleArray(shuffledParticipants));
   }
 
   const handleSpin = () => {
-    if (isSpinning || numParticipants === 0) return;
+    if (isSpinning || numParticipants < 2) return;
 
     setIsSpinning(true);
     setWinner(null);
 
     const winnerIndex = Math.floor(Math.random() * numParticipants);
     const winnerData = shuffledParticipants[winnerIndex];
-
-    const winnerSegmentStart = segmentDegrees * winnerIndex;
-    const winnerSegmentCenter = winnerSegmentStart + (segmentDegrees / 2);
     
-    // The pointer is at the top (270deg). We want the center of the winner's segment to land there.
-    const targetVisualAngle = (270 - winnerSegmentCenter + 360) % 360;
-    const currentVisualAngle = rotation % 360;
+    const winnerSegmentCenter = (segmentDegrees * winnerIndex) + (segmentDegrees / 2);
+    const targetAngle = 360 - winnerSegmentCenter;
+
+    const extraSpins = (8 + Math.floor(Math.random() * 4)) * 360;
+    const currentAngle = rotation % 360;
+    const newRotation = rotation - currentAngle + extraSpins + targetAngle;
     
-    let angleDelta = targetVisualAngle - currentVisualAngle;
-    if (angleDelta < 0) {
-        angleDelta += 360; // Ensure we always spin forward
-    }
-
-    const extraSpins = 8 * 360; // 8 full spins for effect
-    const newRotation = rotation + extraSpins + angleDelta;
-
     setRotation(newRotation);
 
     setTimeout(() => {
       setIsSpinning(false);
-      setWinner(winnerData.name);
-      setShowWinnerDialog(true);
-      onSpinEnd(winnerData.name);
-    }, SPIN_DURATION_MS); // Must match animation duration
+      const winningParticipant = shuffledParticipants.find(p => p.number === winnerData.number);
+      if (winningParticipant) {
+        setWinner(winningParticipant.name);
+        setShowWinnerDialog(true);
+        onSpinEnd(winningParticipant.name);
+      }
+    }, SPIN_DURATION_SECONDS * 1000 + 200);
   };
 
   const wheelStyle = useMemo(() => {
@@ -90,7 +102,7 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
       const end = (i + 1) * segmentDegrees;
       return `${COLORS[i % COLORS.length]} ${start}deg ${end}deg`;
     });
-    return { background: `conic-gradient(from 0deg, ${gradientParts.join(', ')})` };
+    return { background: `conic-gradient(from 180deg, ${gradientParts.join(', ')})` };
   }, [shuffledParticipants, segmentDegrees, numParticipants]);
 
 
@@ -119,47 +131,51 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="relative w-80 h-80 md:w-96 md:h-96 flex items-center justify-center">
-        {/* Pointer */}
-        <div style={{ clipPath: 'polygon(50% 100%, 0 0, 100% 0)' }} className="absolute top-0 w-8 h-10 bg-accent z-10 transform -translate-y-1/2" />
+      <div className="relative w-80 h-80 md:w-[500px] md:h-[500px] flex items-center justify-center">
+        <div 
+          className="absolute top-[-5px] left-1/2 -translate-x-1/2 w-8 h-10 z-20"
+          style={{ filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.4))' }}
+        >
+          <div style={{ clipPath: 'polygon(50% 100%, 0 0, 100% 0)' }} className="w-full h-full bg-red-500" />
+        </div>
         
         <div
-          className="relative w-full h-full rounded-full border-8 border-accent bg-background shadow-2xl transition-transform ease-out"
+          className="relative w-full h-full rounded-full border-8 border-accent bg-background shadow-2xl"
           style={{ 
             transform: `rotate(${rotation}deg)`,
-            transitionDuration: isSpinning ? `${SPIN_DURATION_MS}ms` : '0ms'
+            transition: isSpinning ? `transform ${SPIN_DURATION_SECONDS}s cubic-bezier(0.25, 1, 0.5, 1)` : 'none'
           }}
         >
-            {/* Segments */}
             <div className="absolute inset-0" style={wheelStyle} />
 
-            {/* Labels */}
             {numParticipants > 0 && shuffledParticipants.map((participant, index) => {
-              const angle = segmentDegrees * index + (segmentDegrees / 2); // Angle to center of segment
-              const radiusPercent = 35; // 35% from the center
-              const angleRad = (angle - 90) * (Math.PI / 180); // adjust by -90 because 0deg is right, we want it to be top
-              const x = 50 + radiusPercent * Math.cos(angleRad);
-              const y = 50 + radiusPercent * Math.sin(angleRad);
+              const angle = segmentDegrees * index + (segmentDegrees / 2);
+              const textRadius = 42.5;
+              const angleRad = (angle - 90) * (Math.PI / 180);
+              const x = 50 + textRadius * Math.cos(angleRad);
+              const y = 50 + textRadius * Math.sin(angleRad);
               
               return (
                 <div
                   key={`${participant.number}-${index}`}
-                  className="absolute flex items-center justify-center"
+                  className="absolute flex items-center justify-center pointer-events-none"
                   style={{
                     top: `${y}%`,
                     left: `${x}%`,
-                    transform: `translate(-50%, -50%)`
+                    transform: `translate(-50%, -50%) rotate(${angle}deg)`
                   }}
                 >
                   <span
-                    className="block text-center font-headline font-bold text-2xl md:text-3xl text-white"
-                    style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.7), 0 0 5px rgba(0,0,0,0.5)' }}
+                    className="block text-center font-headline font-bold text-lg md:text-xl text-white"
+                    style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}
                   >
-                    #{participant.number}
+                    {participant.number}
                   </span>
                 </div>
               )
-          })}
+            })}
+
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-white rounded-full z-10 shadow-inner" />
         </div>
       </div>
       
@@ -168,7 +184,7 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
             <Shuffle className="mr-2 h-5 w-5" />
             Mezclar
         </Button>
-        <Button onClick={handleSpin} disabled={isSpinning} size="lg" className="font-bold text-lg px-8 py-6 rounded-full shadow-lg">
+        <Button onClick={handleSpin} disabled={isSpinning || numParticipants < 2} size="lg" className="font-bold text-lg px-8 py-6 rounded-full shadow-lg">
             <Star className={cn("mr-2 h-5 w-5", isSpinning && "animate-spin")} />
             {isSpinning ? 'Girando...' : 'Girar la Tómbola'}
         </Button>
