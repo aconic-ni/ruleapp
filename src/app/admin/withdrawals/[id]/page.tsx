@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { notFound, useRouter } from 'next/navigation';
-import { getWithdrawalById } from '@/lib/data';
+import { getWithdrawalById } from '@/lib/actions';
 import type { Withdrawal } from '@/lib/data';
 import WithdrawalReceipt from '@/components/admin/WithdrawalReceipt';
 import { Button } from '@/components/ui/button';

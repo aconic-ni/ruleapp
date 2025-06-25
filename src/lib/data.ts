@@ -1,6 +1,6 @@
 
-import { db } from './firebase';
-import { collection, getDocs, getDoc, doc, orderBy, limit, query, where } from 'firebase/firestore';
+import { db } from './firebase-admin';
+import { collection, getDocs, getDoc, doc, orderBy, limit, query, where } from 'firebase-admin/firestore';
 
 export interface Participant {
     name: string;
@@ -41,7 +41,7 @@ export interface Withdrawal {
 export async function getFunds(): Promise<Funds> {
     try {
         const fundsDoc = await getDoc(doc(db, 'funds', 'summary'));
-        if (fundsDoc.exists()) {
+        if (fundsDoc.exists) {
             return fundsDoc.data() as Funds;
         }
     } catch (error) {
@@ -100,33 +100,6 @@ export async function getAllWinners(): Promise<Winner[]> {
     return winners;
 }
 
-export async function getRaffleById(id: string): Promise<Raffle | null> {
-    try {
-        const docRef = doc(db, 'ruletas', id);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            return {
-                id: docSnap.id,
-                participants: data.participants,
-                raffleTotal: data.raffleTotal,
-                status: data.status,
-                winner: data.winner,
-                date: data.date.toDate().toISOString().split('T')[0],
-                drawDate: data.drawDate ? data.drawDate.toDate().toISOString().split('T')[0] : undefined,
-            };
-        } else {
-            console.log("No such raffle document!");
-            return null;
-        }
-    } catch (error) {
-        console.error("Error fetching raffle by ID: ", error);
-        return null;
-    }
-}
-
-
 export async function getWithdrawals(): Promise<Withdrawal[]> {
     const withdrawals: Withdrawal[] = [];
     try {
@@ -147,29 +120,4 @@ export async function getWithdrawals(): Promise<Withdrawal[]> {
         console.error("Error fetching withdrawals: ", error);
     }
     return withdrawals;
-}
-
-export async function getWithdrawalById(id: string): Promise<Withdrawal | null> {
-    try {
-        const docRef = doc(db, 'retiros', id);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            return {
-                id: docSnap.id,
-                solicitudId: data.solicitudId,
-                name: data.name,
-                amount: data.amount,
-                declaration: data.declaration,
-                date: data.date.toDate().toISOString().split('T')[0],
-            };
-        } else {
-            console.log("No such document!");
-            return null;
-        }
-    } catch (error) {
-        console.error("Error fetching withdrawal by ID: ", error);
-        return null;
-    }
 }

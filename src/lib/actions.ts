@@ -4,7 +4,7 @@
 import { db } from './firebase-admin';
 import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { revalidatePath } from 'next/cache';
-import type { Participant, Withdrawal } from './data';
+import type { Participant, Withdrawal, Raffle } from './data';
 
 // Ensure the funds summary document exists
 async function ensureFundsSummaryExists() {
@@ -112,3 +112,55 @@ export async function addWithdrawal(withdrawalRequest: Omit<Withdrawal, 'id' | '
     }
 }
 
+export async function getRaffleById(id: string): Promise<Raffle | null> {
+    try {
+        const docRef = db.collection('ruletas').doc(id);
+        const docSnap = await docRef.get();
+
+        if (docSnap.exists) {
+            const data = docSnap.data();
+            if (!data) return null;
+            return {
+                id: docSnap.id,
+                participants: data.participants,
+                raffleTotal: data.raffleTotal,
+                status: data.status,
+                winner: data.winner,
+                date: data.date.toDate().toISOString().split('T')[0],
+                drawDate: data.drawDate ? data.drawDate.toDate().toISOString().split('T')[0] : undefined,
+            };
+        } else {
+            console.log("No such raffle document!");
+            return null;
+        }
+    } catch (error) {
+        console.error("Error fetching raffle by ID: ", error);
+        return null;
+    }
+}
+
+export async function getWithdrawalById(id: string): Promise<Withdrawal | null> {
+    try {
+        const docRef = db.collection('retiros').doc(id);
+        const docSnap = await docRef.get();
+
+        if (docSnap.exists) {
+            const data = docSnap.data();
+            if (!data) return null;
+            return {
+                id: docSnap.id,
+                solicitudId: data.solicitudId,
+                name: data.name,
+                amount: data.amount,
+                declaration: data.declaration,
+                date: data.date.toDate().toISOString().split('T')[0],
+            };
+        } else {
+            console.log("No such document!");
+            return null;
+        }
+    } catch (error) {
+        console.error("Error fetching withdrawal by ID: ", error);
+        return null;
+    }
+}
