@@ -22,6 +22,7 @@ const firebaseConfig = {
 // Initialize Firebase
 // This pattern prevents re-initializing the app on hot-reloads,
 // and ensures it only runs on the client side.
+// If the config is not available, Firebase services will be null.
 const app: FirebaseApp | null = typeof window !== 'undefined' && firebaseConfig.apiKey
     ? !getApps().length ? initializeApp(firebaseConfig) : getApp()
     : null;
@@ -31,7 +32,7 @@ const auth: Auth | null = app ? getAuth(app) : null;
 const analytics: Analytics | null = app && typeof window !== 'undefined' ? getAnalytics(app) : null;
 
 if (typeof window !== 'undefined' && !firebaseConfig.apiKey) {
-    console.error("Firebase API key is missing. Please make sure NEXT_PUBLIC_FIREBASE_* environment variables are set.");
+    console.warn("Firebase API key is missing. The app will run in a limited state. Please make sure NEXT_PUBLIC_FIREBASE_* environment variables are set.");
 }
 
 export { app, db, auth, analytics };
