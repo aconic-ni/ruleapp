@@ -1,17 +1,17 @@
 
 'use server';
 
-import { db } from './firebase';
-import { collection, addDoc, doc, getDoc, setDoc, updateDoc, increment, Timestamp } from 'firebase/firestore';
+import { db } from './firebase-admin';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { revalidatePath } from 'next/cache';
 import type { Participant, Withdrawal } from './data';
 
 // Ensure the funds summary document exists
 async function ensureFundsSummaryExists() {
-    const fundsRef = doc(db, 'funds', 'summary');
-    const fundsSnap = await getDoc(fundsRef);
-    if (!fundsSnap.exists()) {
-        await setDoc(fundsRef, { total: 0, withdrawn: 0 });
+    const fundsRef = db.collection('funds').doc('summary');
+    const fundsSnap = await fundsRef.get();
+    if (!fundsSnap.exists) {
+        await fundsRef.set({ total: 0, withdrawn: 0 });
     }
     return fundsRef;
 }
@@ -27,7 +27,7 @@ export async function createRaffle(participants: Participant[]) {
         const raffleTotal = participants.reduce((sum, p) => sum + p.ticketValue, 0);
 
         // 2. Add the raffle record to the 'ruletas' collection
-        const raffleDocRef = await addDoc(collection(db, 'ruletas'), {
+        const raffleDocRef = await db.collection('ruletas').add({
             participants: participants,
             raffleTotal: raffleTotal,
             date: Timestamp.now(), // Creation date
@@ -36,8 +36,8 @@ export async function createRaffle(participants: Participant[]) {
 
         // 3. Atomically update the total funds in the summary document
         const fundsRef = await ensureFundsSummaryExists();
-        await updateDoc(fundsRef, {
-            total: increment(raffleTotal)
+        await fundsRef.update({
+            total: FieldValue.increment(raffleTotal)
         });
 
         // 4. Revalidate paths to show updated data
@@ -60,10 +60,10 @@ export async function setRaffleWinner(raffleId: string, winnerName: string) {
     }
 
     try {
-        const raffleRef = doc(db, 'ruletas', raffleId);
+        const raffleRef = db.collection('ruletas').doc(raffleId);
 
         // Update the document with the winner and the draw date
-        await updateDoc(raffleRef, {
+        await raffleRef.update({
             winner: winnerName,
             drawDate: Timestamp.now(),
             status: 'completed'
@@ -93,12 +93,12 @@ export async function addWithdrawal(withdrawalRequest: Omit<Withdrawal, 'id' | '
         };
 
         // 1. Add the withdrawal record to the 'retiros' collection
-        await addDoc(collection(db, 'retiros'), withdrawalData);
+        await db.collection('retiros').add(withdrawalData);
 
         // 2. Atomically update the withdrawn amount in the summary document
         const fundsRef = await ensureFundsSummaryExists();
-        await updateDoc(fundsRef, {
-            withdrawn: increment(withdrawalRequest.amount)
+        await fundsRef.update({
+            withdrawn: FieldValue.increment(withdrawalRequest.amount)
         });
 
         // 3. Revalidate paths to show updated data
