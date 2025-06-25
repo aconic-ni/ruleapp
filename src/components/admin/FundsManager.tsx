@@ -1,10 +1,10 @@
+
 "use client";
 
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useToast } from "@/hooks/use-toast";
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
@@ -18,7 +18,7 @@ import type { Funds, Withdrawal } from '@/lib/data';
 interface FundsManagerProps {
     funds: Funds;
     withdrawals: Withdrawal[];
-    onAddWithdrawal: (withdrawal: Omit<Withdrawal, 'id' | 'date'>) => void;
+    onAddWithdrawal: (withdrawal: Omit<Withdrawal, 'id' | 'date'>) => Promise<void>;
 }
 
 const withdrawalSchema = z.object({
@@ -31,7 +31,6 @@ const withdrawalSchema = z.object({
 type WithdrawalFormValues = z.infer<typeof withdrawalSchema>;
 
 export default function FundsManager({ funds, withdrawals, onAddWithdrawal }: FundsManagerProps) {
-    const { toast } = useToast();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
 
     const form = useForm<WithdrawalFormValues>({
@@ -46,7 +45,7 @@ export default function FundsManager({ funds, withdrawals, onAddWithdrawal }: Fu
     
     const balance = funds.total - funds.withdrawn;
 
-    const onSubmit = (data: WithdrawalFormValues) => {
+    const onSubmit = async (data: WithdrawalFormValues) => {
         if (data.amount > balance) {
             form.setError("amount", {
                 type: "manual",
@@ -55,8 +54,7 @@ export default function FundsManager({ funds, withdrawals, onAddWithdrawal }: Fu
             return;
         }
 
-        onAddWithdrawal(data);
-        toast({ title: "Éxito", description: `Solicitud de retiro por $${data.amount.toLocaleString()} registrada.` });
+        await onAddWithdrawal(data);
         form.reset();
         setIsDialogOpen(false);
     };

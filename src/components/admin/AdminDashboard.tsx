@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -12,10 +13,11 @@ import Roulette from '../Roulette';
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
 import type { Participant, Funds, Winner, Withdrawal } from '@/lib/data';
+import { saveRaffle, addWithdrawal } from '@/lib/actions';
 import Footer from "../Footer";
 
 interface AdminDashboardProps {
-    initialParticipants: Participant[];
+    initialParticipants: Participant[]; // This will likely be empty now
     initialFunds: Funds;
     initialWinners: Winner[];
     initialWithdrawals: Withdrawal[];
@@ -25,11 +27,14 @@ export default function AdminDashboard({ initialParticipants, initialFunds, init
     const router = useRouter();
     const { toast } = useToast();
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-
+    
+    // Local state for the current, un-saved raffle
     const [participants, setParticipants] = useState<Participant[]>(initialParticipants);
-    const [funds, setFunds] = useState<Funds>(initialFunds);
-    const [winners, setWinners] = useState<Winner[]>(initialWinners);
-    const [withdrawals, setWithdrawals] = useState<Withdrawal[]>(initialWithdrawals);
+
+    // These props will be updated by router.refresh()
+    const funds = initialFunds;
+    const winners = initialWinners;
+    const withdrawals = initialWithdrawals;
 
     useEffect(() => {
         try {
@@ -54,31 +59,39 @@ export default function AdminDashboard({ initialParticipants, initialFunds, init
     };
     
     const handleAddParticipant = (name: string, ticketValue: number, number: number) => {
+        // This only updates local state. DB is updated on raffle completion.
         setParticipants(prev => [...prev, { name, ticketValue, number }]);
-        setFunds(prev => ({ ...prev, total: prev.total + ticketValue }));
     };
 
-    const handleAddWithdrawal = (withdrawalRequest: Omit<Withdrawal, 'id' | 'date'>) => {
-        const newWithdrawal: Withdrawal = {
-            ...withdrawalRequest,
-            id: `IDRetiro-${Date.now()}`,
-            date: new Date().toISOString().split('T')[0],
-        };
-        setWithdrawals(prev => [newWithdrawal, ...prev]);
-        setFunds(prev => ({ ...prev, withdrawn: prev.withdrawn + newWithdrawal.amount }));
+    const handleAddWithdrawal = async (withdrawalRequest: Omit<Withdrawal, 'id' | 'date'>) => {
+        try {
+            await addWithdrawal(withdrawalRequest);
+            toast({ title: "Éxito", description: "Retiro registrado y fondos actualizados." });
+            router.refresh(); // Re-fetches server-side data
+        } catch (error) {
+            toast({ title: "Error", description: "No se pudo registrar el retiro.", variant: "destructive" });
+        }
     };
     
-    const handleSpinEnd = (winnerName: string) => {
-        const newWinner: Winner = {
-            name: winnerName,
-            date: new Date().toISOString().split('T')[0],
-        };
-        setWinners(prev => [newWinner, ...prev]);
-        setParticipants([]); // Clear participants for the next raffle
-        toast({
-            title: "¡Tómbola Finalizada!",
-            description: `El ganador es ${winnerName}. Se ha iniciado una nueva tómbola.`,
-        });
+    const handleSpinEnd = async (winnerName: string) => {
+        try {
+            await saveRaffle(winnerName, participants);
+            
+            toast({
+                title: "¡Tómbola Finalizada y Guardada!",
+                description: `El ganador es ${winnerName}. Se ha iniciado una nueva tómbola.`,
+            });
+            
+            setParticipants([]); // Clear local participants for the next raffle
+            router.refresh(); // Re-fetches server-side data (funds, winners)
+            
+        } catch (error) {
+             toast({
+                title: "Error de Guardado",
+                description: "No se pudo guardar la tómbola en la base de datos.",
+                variant: "destructive"
+            });
+        }
     };
 
     if (!isAuthenticated) {

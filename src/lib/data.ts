@@ -1,17 +1,11 @@
 // In a real application, this file would contain functions
 // to interact with a database like Firestore.
+import { db } from './firebase';
+import { collection, getDocs, getDoc, doc, orderBy, limit, query } from 'firebase/firestore';
 
 // Data is now managed by component state, initial state is empty.
 const MOCK_PARTICIPANTS: Participant[] = [];
 
-const MOCK_FUNDS: Funds = {
-    total: 0,
-    withdrawn: 0,
-};
-
-const MOCK_WINNERS: Winner[] = [];
-
-const MOCK_WITHDRAWALS: Withdrawal[] = [];
 
 export interface Participant {
     name: string;
@@ -38,35 +32,79 @@ export interface Withdrawal {
     date: string;
 }
 
+// This function is kept for compatibility, but participant data is now client-side state
+// until a raffle is completed.
 export async function getParticipants(): Promise<Participant[]> {
-    // Simulate API delay
-    await new Promise(res => setTimeout(res, 50));
     return MOCK_PARTICIPANTS;
 }
 
 export async function getFunds(): Promise<Funds> {
-    await new Promise(res => setTimeout(res, 50));
-    return MOCK_FUNDS;
+    try {
+        const fundsDoc = await getDoc(doc(db, 'funds', 'summary'));
+        if (fundsDoc.exists()) {
+            return fundsDoc.data() as Funds;
+        }
+    } catch (error) {
+        console.error("Error fetching funds: ", error);
+    }
+    // Return default if doc doesn't exist or on error
+    return { total: 0, withdrawn: 0 };
 }
 
 export async function getRecentWinners(): Promise<Winner[]> {
-    await new Promise(res => setTimeout(res, 50));
-    // In a real app, you'd fetch and sort by date descending
-    return MOCK_WINNERS.slice(0, 3);
+    const winners: Winner[] = [];
+    try {
+        const q = query(collection(db, 'ruletas'), orderBy('date', 'desc'), limit(3));
+        const querySnapshot = await getDocs(q);
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            winners.push({
+                name: data.winner,
+                date: data.date.toDate().toISOString().split('T')[0],
+            });
+        });
+    } catch (error) {
+        console.error("Error fetching recent winners: ", error);
+    }
+    return winners;
 }
 
 export async function getAllWinners(): Promise<Winner[]> {
-    await new Promise(res => setTimeout(res, 50));
-    return MOCK_WINNERS;
+    const winners: Winner[] = [];
+     try {
+        const q = query(collection(db, 'ruletas'), orderBy('date', 'desc'));
+        const querySnapshot = await getDocs(q);
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            winners.push({
+                name: data.winner,
+                date: data.date.toDate().toISOString().split('T')[0],
+            });
+        });
+    } catch (error) {
+        console.error("Error fetching all winners: ", error);
+    }
+    return winners;
 }
 
 export async function getWithdrawals(): Promise<Withdrawal[]> {
-    await new Promise(res => setTimeout(res, 50));
-    return MOCK_WITHDRAWALS;
+    const withdrawals: Withdrawal[] = [];
+    try {
+        const q = query(collection(db, 'retiros'), orderBy('date', 'desc'));
+        const querySnapshot = await getDocs(q);
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            withdrawals.push({
+                id: doc.id,
+                solicitudId: data.solicitudId,
+                name: data.name,
+                amount: data.amount,
+                declaration: data.declaration,
+                date: data.date.toDate().toISOString().split('T')[0],
+            });
+        });
+    } catch (error) {
+        console.error("Error fetching withdrawals: ", error);
+    }
+    return withdrawals;
 }
-
-// In a real app, you would have functions like these:
-// export async function addParticipant(participant: Participant) { ... }
-// export async function updateFunds(funds: Funds) { ... }
-// export async function addWinner(winner: Winner) { ... }
-// export async function addWithdrawal(withdrawal: Omit<Withdrawal, 'id' | 'date'>) { ... }
