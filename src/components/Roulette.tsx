@@ -45,7 +45,7 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
     setIsSpinning(true);
     setWinner(null);
     const winnerIndex = Math.floor(Math.random() * shuffledParticipants.length);
-    const winnerName = shuffledParticipants[winnerIndex].name;
+    const winnerData = shuffledParticipants[winnerIndex];
 
     const winnerSegmentStart = segmentDegrees * winnerIndex;
     const winnerSegmentCenter = winnerSegmentStart + (segmentDegrees / 2);
@@ -58,9 +58,9 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
 
     setTimeout(() => {
       setIsSpinning(false);
-      setWinner(winnerName);
+      setWinner(winnerData.name);
       setShowWinnerDialog(true);
-      onSpinEnd(winnerName);
+      onSpinEnd(winnerData.name);
     }, 6000); 
   };
 
@@ -109,12 +109,12 @@ export default function Roulette({ participants = [], onSpinEnd }: RouletteProps
                 }}
               >
                 <div 
-                  className="absolute w-[160%] h-full flex items-center justify-center text-white font-semibold text-sm md:text-base -translate-y-1/2"
+                  className="absolute w-[160%] h-full flex items-center justify-center text-white -translate-y-1/2"
                   style={{ 
                     transform: `skewY(${skew > 0 ? -skew : 0}deg) rotate(${segmentDegrees/2}deg) translate(-25%, -50%)`,
                   }}
                 >
-                  <span className="block text-center font-headline break-words px-1">{participant.name.split(' ')[0]}</span>
+                  <span className="block text-center font-headline font-bold text-2xl md:text-3xl">#{participant.number}</span>
                 </div>
               </div>
             )
