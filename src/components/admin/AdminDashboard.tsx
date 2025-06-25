@@ -11,7 +11,6 @@ import WinnerHistory from './WinnerHistory';
 import Roulette from '../Roulette';
 import { Toaster } from "@/components/ui/toaster";
 import { useToast } from "@/hooks/use-toast";
-import Link from "next/link";
 import type { Participant, Funds, Winner, Withdrawal } from '@/lib/data';
 
 interface AdminDashboardProps {
@@ -93,7 +92,7 @@ export default function AdminDashboard({ initialParticipants, initialFunds, init
         <div className="min-h-screen bg-muted/30">
             <header className="bg-card shadow-sm">
                 <div className="container mx-auto p-4 flex justify-between items-center">
-                    <Link href="/" className="text-xl font-headline text-primary">Panel de Administrador</Link>
+                    <div className="text-xl font-headline text-primary">Panel de Administrador</div>
                     <Button variant="outline" onClick={handleLogout}>
                         <LogOut className="mr-2 h-4 w-4" />
                         Cerrar Sesión
