@@ -61,7 +61,7 @@ export default function AdminDashboard({ initialParticipants, initialFunds, init
     const handleAddWithdrawal = (withdrawalRequest: Omit<Withdrawal, 'id' | 'date'>) => {
         const newWithdrawal: Withdrawal = {
             ...withdrawalRequest,
-            id: `REQ-${Date.now()}`,
+            id: `IDRetiro-${Date.now()}`,
             date: new Date().toISOString().split('T')[0],
         };
         setWithdrawals(prev => [newWithdrawal, ...prev]);

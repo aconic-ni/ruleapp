@@ -30,7 +30,8 @@ export interface Winner {
 }
 
 export interface Withdrawal {
-    id: string;
+    id: string; // Auto-generated
+    solicitudId: string; // User-provided
     name: string;
     amount: number;
     declaration: string;

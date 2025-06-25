@@ -22,6 +22,7 @@ interface FundsManagerProps {
 }
 
 const withdrawalSchema = z.object({
+    solicitudId: z.string().min(1, "El ID de solicitud es requerido."),
     name: z.string().min(3, "El nombre es requerido."),
     amount: z.coerce.number().positive("El monto debe ser un número positivo."),
     declaration: z.string().min(10, "La declaración es muy corta.").max(500, "La declaración es muy larga."),
@@ -36,6 +37,7 @@ export default function FundsManager({ funds, withdrawals, onAddWithdrawal }: Fu
     const form = useForm<WithdrawalFormValues>({
         resolver: zodResolver(withdrawalSchema),
         defaultValues: {
+            solicitudId: '',
             name: '',
             amount: 0,
             declaration: '',
@@ -94,10 +96,17 @@ export default function FundsManager({ funds, withdrawals, onAddWithdrawal }: Fu
                                     <DialogHeader>
                                         <DialogTitle>Nueva Solicitud de Retiro</DialogTitle>
                                         <DialogDescription>
-                                            Complete el formulario para registrar un nuevo retiro. El ID de solicitud se generará automáticamente.
+                                            Complete el formulario para registrar un nuevo retiro. El ID de transacción se generará automáticamente.
                                         </DialogDescription>
                                     </DialogHeader>
                                     <div className="grid gap-4 py-4">
+                                        <FormField control={form.control} name="solicitudId" render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>ID Solicitud (Manual)</FormLabel>
+                                                <FormControl><Input placeholder="Ej: SOL-001" {...field} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )} />
                                         <FormField control={form.control} name="name" render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Nombre</FormLabel>
@@ -142,6 +151,7 @@ export default function FundsManager({ funds, withdrawals, onAddWithdrawal }: Fu
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead>ID Transacción</TableHead>
                                     <TableHead>ID Solicitud</TableHead>
                                     <TableHead>Nombre</TableHead>
                                     <TableHead>Fecha</TableHead>
@@ -152,13 +162,14 @@ export default function FundsManager({ funds, withdrawals, onAddWithdrawal }: Fu
                                 {withdrawals.length > 0 ? withdrawals.map((w) => (
                                     <TableRow key={w.id}>
                                         <TableCell className="font-mono text-xs">{w.id}</TableCell>
+                                        <TableCell className="font-mono text-xs">{w.solicitudId}</TableCell>
                                         <TableCell className="font-medium">{w.name}</TableCell>
                                         <TableCell className="text-muted-foreground">{w.date}</TableCell>
                                         <TableCell className="text-right font-semibold">${w.amount.toLocaleString()}</TableCell>
                                     </TableRow>
                                 )) : (
                                     <TableRow>
-                                        <TableCell colSpan={4} className="h-24 text-center">No hay retiros registrados.</TableCell>
+                                        <TableCell colSpan={5} className="h-24 text-center">No hay retiros registrados.</TableCell>
                                     </TableRow>
                                 )}
                             </TableBody>

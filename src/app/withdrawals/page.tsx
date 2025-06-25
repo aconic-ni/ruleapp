@@ -25,6 +25,7 @@ export default async function WithdrawalsPage() {
                           <Table>
                               <TableHeader>
                                   <TableRow>
+                                      <TableHead>ID Transacción</TableHead>
                                       <TableHead>ID Solicitud</TableHead>
                                       <TableHead>Nombre</TableHead>
                                       <TableHead>Fecha</TableHead>
@@ -36,6 +37,7 @@ export default async function WithdrawalsPage() {
                                   {withdrawals.length > 0 ? withdrawals.map((w) => (
                                       <TableRow key={w.id}>
                                           <TableCell className="font-mono text-xs">{w.id}</TableCell>
+                                          <TableCell className="font-mono text-xs">{w.solicitudId}</TableCell>
                                           <TableCell className="font-medium">{w.name}</TableCell>
                                           <TableCell className="text-muted-foreground">{w.date}</TableCell>
                                           <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate" title={w.declaration}>{w.declaration}</TableCell>
@@ -43,7 +45,7 @@ export default async function WithdrawalsPage() {
                                       </TableRow>
                                   )) : (
                                       <TableRow>
-                                          <TableCell colSpan={5} className="h-24 text-center">No hay retiros registrados.</TableCell>
+                                          <TableCell colSpan={6} className="h-24 text-center">No hay retiros registrados.</TableCell>
                                       </TableRow>
                                   )}
                               </TableBody>
