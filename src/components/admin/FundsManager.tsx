@@ -14,6 +14,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Funds, Withdrawal } from '@/lib/data';
+import Link from 'next/link';
+import { Eye } from 'lucide-react';
 
 interface FundsManagerProps {
     funds: Funds;
@@ -154,6 +156,7 @@ export default function FundsManager({ funds, withdrawals, onAddWithdrawal }: Fu
                                     <TableHead>Nombre</TableHead>
                                     <TableHead>Fecha</TableHead>
                                     <TableHead className="text-right">Monto</TableHead>
+                                    <TableHead className="text-right">Acciones</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -164,10 +167,17 @@ export default function FundsManager({ funds, withdrawals, onAddWithdrawal }: Fu
                                         <TableCell className="font-medium">{w.name}</TableCell>
                                         <TableCell className="text-muted-foreground">{w.date}</TableCell>
                                         <TableCell className="text-right font-semibold">${w.amount.toLocaleString()}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Button asChild variant="ghost" size="icon">
+                                                <Link href={`/admin/withdrawals/${w.id}`} title="Ver / Imprimir Recibo">
+                                                    <Eye className="h-4 w-4" />
+                                                </Link>
+                                            </Button>
+                                        </TableCell>
                                     </TableRow>
                                 )) : (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="h-24 text-center">No hay retiros registrados.</TableCell>
+                                        <TableCell colSpan={6} className="h-24 text-center">No hay retiros registrados.</TableCell>
                                     </TableRow>
                                 )}
                             </TableBody>

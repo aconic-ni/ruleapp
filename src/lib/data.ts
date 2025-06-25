@@ -108,3 +108,28 @@ export async function getWithdrawals(): Promise<Withdrawal[]> {
     }
     return withdrawals;
 }
+
+export async function getWithdrawalById(id: string): Promise<Withdrawal | null> {
+    try {
+        const docRef = doc(db, 'retiros', id);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            return {
+                id: docSnap.id,
+                solicitudId: data.solicitudId,
+                name: data.name,
+                amount: data.amount,
+                declaration: data.declaration,
+                date: data.date.toDate().toISOString().split('T')[0],
+            };
+        } else {
+            console.log("No such document!");
+            return null;
+        }
+    } catch (error) {
+        console.error("Error fetching withdrawal by ID: ", error);
+        return null;
+    }
+}
