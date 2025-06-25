@@ -1,49 +1,53 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to check if the requesting user has an 'admin' role.
-    // This requires a 'users' collection where each document ID is a user's UID,
-    // and each document contains a 'role' field.
-    // Example: /users/{uid} -> { role: 'admin' }
+    
+    // Helper function to check if the currently authenticated user has an 'admin' role.
+    // This is the core of our security model.
     function isAdmin() {
       return request.auth != null &&
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Ruletas collection:
-    // Anyone can read the raffle history.
-    // Writes are only allowed from the server (via Server Actions), so client writes are denied.
-    match /ruletas/{ruletaId} {
+    // The 'ruletas' collection contains all raffle data.
+    // It needs to be publicly readable for the home page.
+    // All writes (create, update) are handled by server actions, which must be
+    // initiated by an admin.
+    match /ruletas/{docId} {
       allow read: if true;
-      allow write: if false;
+      allow write: if isAdmin();
+    }
+    
+    // The 'retiros' collection contains all withdrawal history.
+    // It needs to be publicly readable for the withdrawals page.
+    // Writes are handled by server actions initiated by an admin.
+    match /retiros/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
-    // Retiros collection:
-    // Anyone can read the withdrawal history.
-    // Writes are only allowed from the server, so client writes are denied.
-    match /retiros/{retiroId} {
-      allow read: if true;
-      allow write: if false;
-    }
-
-    // Funds summary document:
-    // Anyone can read the funds summary.
-    // Writes are only allowed from the server, so client writes are denied.
+    // The 'funds/summary' document holds the financial totals.
+    // It needs to be publicly readable for the funds page and home page.
+    // Writes (incrementing totals) are handled by server actions initiated by an admin.
     match /funds/summary {
       allow read: if true;
-      allow write: if false;
+      allow write: if isAdmin();
+    }
+    
+    // The 'users' collection stores user roles.
+    // To maintain security, only admins should be able to see or change roles.
+    match /users/{userId} {
+      allow read, write: if isAdmin();
     }
 
-    // Users collection:
-    // Allow users to read their own data.
-    // Allow admins to read any user's data (for potential future admin panels).
-    // Only admins can create, update, or delete user roles.
-    match /users/{userId} {
-      allow read: if request.auth.uid == userId || isAdmin();
-      allow write: if isAdmin();
+    // BEST PRACTICE: Default deny.
+    // This rule ensures that any collection not explicitly matched above is inaccessible.
+    // This prevents accidental exposure of new collections.
+    match /{path=**} {
+      allow read, write: if false;
     }
   }
 }
