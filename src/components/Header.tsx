@@ -1,6 +1,15 @@
+"use client";
+
 import Link from 'next/link';
 import { Ticket, UserCog, Landmark, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
 
 export default function Header() {
   return (
@@ -10,26 +19,51 @@ export default function Header() {
           <Ticket className="h-6 w-6" />
           RuleApp
         </Link>
-        <div className="flex items-center gap-1">
-          <Button asChild variant="ghost">
-            <Link href="/funds">
-              <Landmark className="mr-2 h-4 w-4" />
-              Fondos
-            </Link>
-          </Button>
-          <Button asChild variant="ghost">
-            <Link href="/withdrawals">
-              <History className="mr-2 h-4 w-4" />
-              Retiros
-            </Link>
-          </Button>
-          <Button asChild variant="ghost">
-            <Link href="/admin">
-              <UserCog className="mr-2 h-4 w-4" />
-              Admin
-            </Link>
-          </Button>
-        </div>
+        <TooltipProvider>
+          <div className="flex items-center gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button asChild variant="ghost" size="icon">
+                  <Link href="/funds">
+                    <Landmark className="h-5 w-5" />
+                    <span className="sr-only">Fondos</span>
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Fondos</p>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button asChild variant="ghost" size="icon">
+                  <Link href="/withdrawals">
+                    <History className="h-5 w-5" />
+                    <span className="sr-only">Retiros</span>
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Retiros</p>
+              </TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button asChild variant="ghost" size="icon">
+                  <Link href="/admin">
+                    <UserCog className="h-5 w-5" />
+                    <span className="sr-only">Admin</span>
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Admin</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        </TooltipProvider>
       </nav>
     </header>
   );
